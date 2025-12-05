@@ -15,12 +15,14 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
     <div className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-2 rounded text-white"><MapPin size={24} /></div>
-              <h1 className="text-xl font-bold text-gray-900">ルートセールス訪問一覧</h1>
+          <div className="flex flex-col md:flex-row justify-between items-center py-3 md:h-16 md:py-0 gap-3">
+            <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start">
+              <div className="bg-blue-600 p-2 rounded text-white flex-shrink-0"><MapPin size={20} className="md:w-6 md:h-6" /></div>
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">ルートセールス訪問一覧</h1>
             </div>
-            <div className="flex items-center gap-4">{headerActions}</div>
+            <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end overflow-x-auto no-scrollbar pb-1 md:pb-0">
+              {headerActions}
+            </div>
           </div>
         </div>
       </header>
@@ -28,7 +30,7 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
             {DAYS_OF_WEEK.map((day) => (
-              <button key={day} onClick={() => onDayChange(day)} className={clsx(day === currentDay ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex-1 text-center transition-colors')}>
+              <button key={day} onClick={() => onDayChange(day)} className={clsx(day === currentDay ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm flex-1 text-center transition-colors')}>
                 {day}曜日
               </button>
             ))}
@@ -36,7 +38,7 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
         </div>
       </div>
       <main className="flex-1 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">{children}</div>
       </main>
     </div>
   );

@@ -2,15 +2,16 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Customer } from '../types';
-import { GripVertical, Pencil } from 'lucide-react';
+import { GripVertical, Pencil, Trash2 } from 'lucide-react';
 
 interface Props {
   customer: Customer;
   index: number;
   onEdit: (customer: Customer) => void;
+  onDelete: (id: string) => void;
 }
 
-export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit }) => {
+export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: customer.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -18,6 +19,13 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit }) => {
     zIndex: isDragging ? 100 : 'auto',
     opacity: isDragging ? 0.5 : 1,
     position: 'relative' as const,
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`「${customer.name}」を削除してもよろしいですか？`)) {
+      onDelete(customer.id);
+    }
   };
 
   return (
@@ -36,9 +44,14 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit }) => {
         <div className="md:col-span-4 text-sm text-gray-600 truncate">{customer.address}</div>
         <div className="md:col-span-3 text-sm text-gray-500 truncate" title={customer.remarks}>{customer.remarks}</div>
       </div>
-      <button onClick={() => onEdit(customer)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Pencil size={18} />
-      </button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={() => onEdit(customer)} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="編集">
+          <Pencil size={18} />
+        </button>
+        <button onClick={handleDeleteClick} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="削除">
+          <Trash2 size={18} />
+        </button>
+      </div>
     </div>
   );
 };

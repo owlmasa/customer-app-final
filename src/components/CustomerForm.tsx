@@ -77,3 +77,4 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
     </div>
   );
 };
+

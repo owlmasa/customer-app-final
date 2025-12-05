@@ -8,6 +8,7 @@ interface StoreState {
   schedules: Record<DayOfWeek, string[]>;
   addCustomer: (customer: Omit<Customer, 'id'>, day?: DayOfWeek) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  deleteCustomer: (id: string) => void;
   importCustomers: (customers: Omit<Customer, 'id'>[], targetDay?: DayOfWeek) => void;
   updateSchedule: (day: DayOfWeek, customerIds: string[]) => void;
   removeFromSchedule: (day: DayOfWeek, customerId: string) => void;
@@ -35,6 +36,19 @@ export const useStore = create<StoreState>()(
         set((state) => ({
           customers: { ...state.customers, [id]: { ...state.customers[id], ...updates } },
         }));
+      },
+      deleteCustomer: (id) => {
+        set((state) => {
+          const newCustomers = { ...state.customers };
+          delete newCustomers[id];
+          
+          const newSchedules = { ...state.schedules };
+          (Object.keys(newSchedules) as DayOfWeek[]).forEach(day => {
+            newSchedules[day] = newSchedules[day].filter(customerId => customerId !== id);
+          });
+          
+          return { customers: newCustomers, schedules: newSchedules };
+        });
       },
       importCustomers: (newCustomersData, targetDay) => {
         set((state) => {

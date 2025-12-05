@@ -1,7 +1,7 @@
 import React from 'react';
 import { DayOfWeek, DAYS_OF_WEEK } from '../types';
 import clsx from 'clsx';
-import { Calendar } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface Props {
   currentDay: DayOfWeek;
@@ -17,8 +17,8 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-2 rounded text-white"><Calendar size={24} /></div>
-              <h1 className="text-xl font-bold text-gray-900">顧客管理アプリ</h1>
+              <div className="bg-blue-600 p-2 rounded text-white"><MapPin size={24} /></div>
+              <h1 className="text-xl font-bold text-gray-900">ルートセールス訪問一覧</h1>
             </div>
             <div className="flex items-center gap-4">{headerActions}</div>
           </div>

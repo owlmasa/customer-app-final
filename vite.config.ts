@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: '顧客管理アプリ',
-        short_name: '顧客管理',
+        name: 'ルートセールス訪問一覧',
+        short_name: '訪問一覧',
         description: 'シンプルな顧客訪問スケジュール管理アプリ',
         theme_color: '#2563eb',
         background_color: '#f3f4f6',

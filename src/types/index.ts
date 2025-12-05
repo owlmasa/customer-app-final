@@ -14,3 +14,4 @@ export interface VisitSchedule {
 }
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['月', '火', '水', '木', '金'];
+

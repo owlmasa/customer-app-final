@@ -8,9 +8,10 @@ interface Props {
   customers: Customer[];
   onReorder: (newOrderIds: string[]) => void;
   onEdit: (customer: Customer) => void;
+  onDelete: (id: string) => void;
 }
 
-export const SortableCustomerList: React.FC<Props> = ({ customers, onReorder, onEdit }) => {
+export const SortableCustomerList: React.FC<Props> = ({ customers, onReorder, onEdit, onDelete }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -37,7 +38,7 @@ export const SortableCustomerList: React.FC<Props> = ({ customers, onReorder, on
             <div className="col-span-3">備考</div>
           </div>
           {customers.map((customer, index) => (
-            <CustomerCard key={customer.id} customer={customer} index={index} onEdit={onEdit} />
+            <CustomerCard key={customer.id} customer={customer} index={index} onEdit={onEdit} onDelete={onDelete} />
           ))}
           {customers.length === 0 && (
              <div className="text-center py-10 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">

@@ -6,3 +6,20 @@ body {
   background-color: #f3f4f6;
 }
 
+@layer base {
+  button {
+    @apply appearance-none border-none outline-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

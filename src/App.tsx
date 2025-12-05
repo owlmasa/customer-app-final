@@ -33,7 +33,7 @@ function App() {
       <>
         <CSVExport customers={Object.values(customers)} />
         <CSVImport onImport={handleImport} />
-        <button onClick={handleAdd} className="flex items-center gap-1 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap">
+        <button onClick={handleAdd} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none">
           <Plus size={16} className="md:w-[18px] md:h-[18px]" /> 
           <span className="hidden sm:inline">新規追加</span>
           <span className="inline sm:hidden">追加</span>

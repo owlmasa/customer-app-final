@@ -31,7 +31,6 @@ function App() {
     schedules, 
     addCustomer, 
     updateCustomer, 
-    deleteCustomer, 
     importCustomers, 
     updateSchedule,
     clearSchedule,

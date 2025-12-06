@@ -60,19 +60,22 @@ function App() {
 
     if (!over) return;
 
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
+
     // If dropped on a tab (move to another day)
-    if (String(over.id).startsWith('tab-')) {
-      const targetDay = String(over.id).replace('tab-', '') as DayOfWeek;
+    if (overIdStr.startsWith('tab-')) {
+      const targetDay = overIdStr.replace('tab-', '') as DayOfWeek;
       if (targetDay !== currentDay) {
-        moveCustomerToDay(active.id as string, targetDay);
+        moveCustomerToDay(activeIdStr, targetDay);
         return;
       }
     }
 
     // If dropped within the list (reorder)
-    if (active.id !== over.id) {
-      const oldIndex = scheduledCustomers.findIndex((c) => c.id === active.id);
-      const newIndex = scheduledCustomers.findIndex((c) => c.id === over.id);
+    if (activeIdStr !== overIdStr) {
+      const oldIndex = scheduledCustomers.findIndex((c) => c.id === activeIdStr);
+      const newIndex = scheduledCustomers.findIndex((c) => c.id === overIdStr);
       if (oldIndex !== -1 && newIndex !== -1) {
         const newOrder = arrayMove(scheduledCustomers, oldIndex, newIndex);
         updateSchedule(currentDay, newOrder.map(c => c.id));
@@ -81,7 +84,30 @@ function App() {
   };
 
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setIsFormOpen(true); };
-  const handleDelete = (id: string) => { deleteCustomer(id); };
+  
+  // For single delete, we probably just want to remove from THIS day, not globally,
+  // unless the user explicitly wants to delete the customer record.
+  // Based on the "clearSchedule" fix, let's assume the user wants to remove the schedule item.
+  // But if they click the trash can on a card, they might mean "delete this visit".
+  // I'll change this to remove from schedule only, to match the "clear" behavior logic.
+  const handleDelete = (id: string) => { 
+      // We need a new function in store for "remove single from schedule" vs "delete customer"
+      // For now, I'll use a direct store manipulation via a new action or existing one.
+      // Wait, useStore has removeFromSchedule? No, I removed it.
+      // Let's add it back or use deleteCustomer (which wipes everything).
+      // User complained about "deleting Mon when deleting Wed".
+      // So I should implement "removeFromCurrentSchedule" instead of global delete.
+      // But wait, I already modified clearSchedule to only clear the schedule.
+      // Let's modify deleteCustomer to only remove from ALL schedules if it's global,
+      // OR create a new function "removeCustomerFromDay".
+      
+      // Actually, the previous deleteCustomer removed from ALL days.
+      // If I want to remove only from THIS day, I need to filter schedules[currentDay].
+      // Let's implement a local removal.
+      const newIds = currentDaySchedule.filter(cId => cId !== id);
+      updateSchedule(currentDay, newIds);
+  };
+
   const handleCopy = (id: string, targetDay: DayOfWeek) => { copyCustomerToDay(id, targetDay); };
   const handleAdd = () => { setEditingCustomer(undefined); setIsFormOpen(true); };
   const handleFormSubmit = (data: Omit<Customer, 'id'>) => {

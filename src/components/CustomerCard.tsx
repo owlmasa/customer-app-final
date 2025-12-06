@@ -74,9 +74,14 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelet
         <div className="md:col-span-4 text-sm text-gray-600 truncate">
            {customer.address}
         </div>
-        <div className="md:col-span-3 text-sm text-gray-500 truncate flex items-center gap-2">
-           {customer.locationType && <span className="text-xs bg-gray-100 px-1 rounded text-gray-600">{customer.locationType}</span>}
-           <span title={customer.remarks} className="truncate">{customer.remarks}</span>
+        <div className="md:col-span-3 text-sm text-gray-500 flex items-center gap-2 overflow-hidden">
+           {customer.locationType && <span className="text-xs bg-gray-100 px-1 rounded text-gray-600 flex-shrink-0">{customer.locationType}</span>}
+           <span title={customer.remarks} className="truncate flex-1">{customer.remarks}</span>
+           {customer.priceRevisionDate && (
+             <span className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap" title="価格改定日">
+               {customer.priceRevisionDate}
+             </span>
+           )}
         </div>
       </div>
 

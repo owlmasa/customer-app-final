@@ -6,6 +6,10 @@ export interface Customer {
   name: string; // 顧客名
   address: string; // 住所
   remarks: string; // 備考欄
+  priceRevisionDate?: string; // 価格改定日
+  locationType?: 'インロケ' | 'アウトロケ'; // ロケーション
+  isCorporate?: boolean; // 法人かどうか
+  visitFrequency?: '1' | '2' | '3' | '4' | '5' | 'A' | 'B' | 'ゴミ'; // 訪問頻度
 }
 
 export interface VisitSchedule {

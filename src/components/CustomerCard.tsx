@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Customer, DAYS_OF_WEEK, DayOfWeek } from '../types';
 import { GripVertical, Pencil, Trash2, Copy } from 'lucide-react';
+import clsx from 'clsx';
 
 interface Props {
   customer: Customer;
@@ -42,7 +43,14 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelet
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex items-center gap-3 mb-2 group hover:shadow-md transition-shadow">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={clsx(
+        "p-3 rounded-lg shadow-sm border border-gray-200 flex items-center gap-3 mb-2 group hover:shadow-md transition-shadow",
+        customer.isCorporate ? 'bg-cyan-50' : 'bg-white'
+      )}
+    >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 touch-none">
         <GripVertical size={20} />
       </div>
@@ -55,9 +63,21 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelet
         <div className="md:col-span-2 font-mono text-sm text-gray-600 flex items-center">
            <span className="md:hidden text-xs text-gray-400 mr-2">No.</span>{customer.customerNumber}
         </div>
-        <div className="md:col-span-3 font-medium text-gray-900">{customer.name}</div>
-        <div className="md:col-span-4 text-sm text-gray-600 truncate">{customer.address}</div>
-        <div className="md:col-span-3 text-sm text-gray-500 truncate" title={customer.remarks}>{customer.remarks}</div>
+        <div className="md:col-span-3 font-medium text-gray-900">
+          {customer.name}
+          {customer.visitFrequency && (
+            <span className="ml-2 text-xs px-1.5 py-0.5 bg-gray-100 rounded-md text-gray-600 border border-gray-200">
+              {customer.visitFrequency}
+            </span>
+          )}
+        </div>
+        <div className="md:col-span-4 text-sm text-gray-600 truncate">
+           {customer.address}
+        </div>
+        <div className="md:col-span-3 text-sm text-gray-500 truncate flex items-center gap-2">
+           {customer.locationType && <span className="text-xs bg-gray-100 px-1 rounded text-gray-600">{customer.locationType}</span>}
+           <span title={customer.remarks} className="truncate">{customer.remarks}</span>
+        </div>
       </div>
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

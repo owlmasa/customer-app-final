@@ -24,12 +24,21 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
             const name = row['顧客名'];
             const address = row['住所'] || '';
             const remarks = row['備考欄'] || '';
+            const priceRevisionDate = row['価格改定日'] || '';
+            const locationType = row['ロケーション'] === 'インロケ' || row['ロケーション'] === 'アウトロケ' ? row['ロケーション'] : undefined;
+            const isCorporate = row['法人'] === 'TRUE' || row['法人'] === 'true' || row['法人'] === '1';
+            const visitFrequency = ['1', '2', '3', '4', '5', 'A', 'B', 'ゴミ'].includes(row['訪問頻度']) ? row['訪問頻度'] : undefined;
+
             if (customerNumber && name) {
                 importedData.push({
                     customerNumber: String(customerNumber).trim(),
                     name: String(name).trim(),
                     address: String(address).trim(),
                     remarks: String(remarks).trim(),
+                    priceRevisionDate,
+                    locationType,
+                    isCorporate,
+                    visitFrequency
                 });
             }
         });

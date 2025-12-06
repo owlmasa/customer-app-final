@@ -2,6 +2,7 @@ import React from 'react';
 import { DayOfWeek, DAYS_OF_WEEK } from '../types';
 import clsx from 'clsx';
 import { MapPin } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
 
 interface Props {
   currentDay: DayOfWeek;
@@ -9,6 +10,28 @@ interface Props {
   children: React.ReactNode;
   headerActions?: React.ReactNode;
 }
+
+const DroppableTab = ({ day, currentDay, onClick }: { day: DayOfWeek, currentDay: DayOfWeek, onClick: () => void }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `tab-${day}`,
+    data: { day }
+  });
+
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      className={clsx(
+        day === currentDay ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+        isOver ? 'bg-blue-50 border-blue-300' : '',
+        'whitespace-nowrap py-3 md:py-4 px-3 border-b-2 font-medium text-sm flex-shrink-0 text-center transition-colors'
+      )}
+    >
+      {day}
+      {day !== 'その他' && '曜日'}
+    </button>
+  );
+};
 
 export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions }) => {
   return (
@@ -28,11 +51,9 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
       </header>
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+          <nav className="-mb-px flex overflow-x-auto no-scrollbar" aria-label="Tabs">
             {DAYS_OF_WEEK.map((day) => (
-              <button key={day} onClick={() => onDayChange(day)} className={clsx(day === currentDay ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm flex-1 text-center transition-colors')}>
-                {day}曜日
-              </button>
+              <DroppableTab key={day} day={day} currentDay={currentDay} onClick={() => onDayChange(day)} />
             ))}
           </nav>
         </div>

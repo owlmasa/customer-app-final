@@ -1,4 +1,4 @@
-export type DayOfWeek = '月' | '火' | '水' | '木' | '金';
+export type DayOfWeek = '月' | '火' | '水' | '木' | '金' | 'その他';
 
 export interface Customer {
   id: string;
@@ -13,5 +13,4 @@ export interface VisitSchedule {
   customerIds: string[]; // Ordered list of customer IDs
 }
 
-export const DAYS_OF_WEEK: DayOfWeek[] = ['月', '火', '水', '木', '金'];
-
+export const DAYS_OF_WEEK: DayOfWeek[] = ['月', '火', '水', '木', '金', 'その他'];

@@ -12,6 +12,12 @@ interface StoreState {
   importCustomers: (customers: Omit<Customer, 'id'>[], targetDay?: DayOfWeek) => void;
   updateSchedule: (day: DayOfWeek, customerIds: string[]) => void;
   removeFromSchedule: (day: DayOfWeek, customerId: string) => void;
+  
+  // New features
+  clearSchedule: (day: DayOfWeek) => void;
+  copyCustomerToDay: (customerId: string, targetDay: DayOfWeek) => void;
+  moveCustomerToDay: (customerId: string, targetDay: DayOfWeek) => void;
+  
   getCustomer: (id: string) => Customer | undefined;
 }
 
@@ -19,7 +25,7 @@ export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       customers: {},
-      schedules: { '月': [], '火': [], '水': [], '木': [], '金': [] },
+      schedules: { '月': [], '火': [], '水': [], '木': [], '金': [], 'その他': [] },
       addCustomer: (customerData, day) => {
         const id = uuidv4();
         const newCustomer = { ...customerData, id };
@@ -85,6 +91,49 @@ export const useStore = create<StoreState>()(
         set((state) => ({
           schedules: { ...state.schedules, [day]: state.schedules[day].filter(id => id !== customerId) }
         }));
+      },
+      clearSchedule: (day) => {
+        set((state) => {
+          const idsToRemove = state.schedules[day];
+          const newCustomers = { ...state.customers };
+          // Remove customers that are only in this day (optional, but safer to keep customer record if needed? 
+          // Requirement said "delete all customer info", so we delete the records too.)
+          idsToRemove.forEach(id => delete newCustomers[id]);
+          
+          return {
+            customers: newCustomers,
+            schedules: { ...state.schedules, [day]: [] }
+          };
+        });
+      },
+      copyCustomerToDay: (customerId, targetDay) => {
+        const state = get();
+        const originalCustomer = state.customers[customerId];
+        if (!originalCustomer) return;
+
+        const newId = uuidv4();
+        // Create a copy with a new ID
+        const newCustomer = { ...originalCustomer, id: newId };
+
+        set((state) => ({
+          customers: { ...state.customers, [newId]: newCustomer },
+          schedules: {
+            ...state.schedules,
+            [targetDay]: [...state.schedules[targetDay], newId]
+          }
+        }));
+      },
+      moveCustomerToDay: (customerId, targetDay) => {
+        set((state) => {
+          const newSchedules = { ...state.schedules };
+          // Remove from all other days
+          (Object.keys(newSchedules) as DayOfWeek[]).forEach(day => {
+            newSchedules[day] = newSchedules[day].filter(id => id !== customerId);
+          });
+          // Add to target day
+          newSchedules[targetDay] = [...newSchedules[targetDay], customerId];
+          return { schedules: newSchedules };
+        });
       },
       getCustomer: (id) => get().customers[id],
     }),

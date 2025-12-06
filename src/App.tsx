@@ -33,8 +33,7 @@ function App() {
     updateCustomer, 
     deleteCustomer, 
     importCustomers, 
-    updateSchedule, 
-    removeFromSchedule,
+    updateSchedule,
     clearSchedule,
     copyCustomerToDay,
     moveCustomerToDay

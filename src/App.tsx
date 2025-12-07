@@ -32,7 +32,8 @@ function App() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [showPriceRevisionOnly, setShowPriceRevisionOnly] = useState(false);
+  // Filter mode: 'all' | 'revised' | 'notRevised'
+  const [filterMode, setFilterMode] = useState<'all' | 'revised' | 'notRevised'>('all');
 
   const { 
     customers, 
@@ -59,9 +60,21 @@ function App() {
     : currentDaySchedule.map(id => customers[id]).filter(Boolean);
 
   // Apply Filter (Price Revision)
-  const displayedCustomers = showPriceRevisionOnly
-    ? baseCustomers.filter(c => c.priceRevisionDate)
-    : baseCustomers;
+  const displayedCustomers = baseCustomers.filter(c => {
+    if (filterMode === 'revised') return !!c.priceRevisionDate;
+    if (filterMode === 'notRevised') return !c.priceRevisionDate;
+    return true;
+  });
+
+  // Calculate Statistics
+  const stats = {
+    total: baseCustomers.length,
+    revised: baseCustomers.filter(c => c.priceRevisionDate).length,
+    notRevised: baseCustomers.filter(c => !c.priceRevisionDate).length,
+    rate: baseCustomers.length > 0 
+      ? Math.round((baseCustomers.filter(c => c.priceRevisionDate).length / baseCustomers.length) * 100) 
+      : 0
+  };
 
   const existingNumbers = Object.values(customers).map(c => c.customerNumber);
 
@@ -73,7 +86,7 @@ function App() {
   const handleImport = (data: Omit<Customer, 'id'>[]) => importCustomers(data, currentDay);
   
   const handleDragStart = (event: any) => {
-    if (isSelectionMode || searchQuery) return; // Disable drag in selection or search mode
+    if (isSelectionMode || searchQuery || filterMode !== 'all') return; // Disable drag if filtered
     setActiveId(event.active.id);
   };
 
@@ -82,7 +95,7 @@ function App() {
     setActiveId(null);
 
     if (!over) return;
-    if (isSelectionMode || searchQuery) return; // Disable drag in selection or search mode
+    if (isSelectionMode || searchQuery || filterMode !== 'all') return;
 
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
@@ -99,7 +112,6 @@ function App() {
       const oldIndex = baseCustomers.findIndex((c) => c.id === activeIdStr);
       const newIndex = baseCustomers.findIndex((c) => c.id === overIdStr);
       if (oldIndex !== -1 && newIndex !== -1) {
-        // Only update schedule if we are NOT in search mode (which is guaranteed by the check above)
         const newOrder = arrayMove(baseCustomers, oldIndex, newIndex);
         updateSchedule(currentDay, newOrder.map(c => c.id));
       }
@@ -108,7 +120,6 @@ function App() {
 
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setIsFormOpen(true); };
   
-  // Note: logic might need review for search mode delete, but sticking to requested "remove from schedule"
   const handleDelete = (id: string) => { 
     if (searchQuery) {
        if(window.confirm('検索結果からの削除は、現在の曜日のスケジュールから削除されますが、よろしいですか？')) {
@@ -197,18 +208,34 @@ function App() {
               )}
             </div>
             <div className="h-4 w-px bg-gray-200 mx-1"></div>
-            <button
-              onClick={() => setShowPriceRevisionOnly(!showPriceRevisionOnly)}
-              className={`p-1 rounded transition-colors flex items-center gap-1 ${
-                showPriceRevisionOnly
-                  ? 'bg-orange-100 text-orange-600'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-              }`}
-              title="価格改定ありのみ表示"
-            >
-              <Filter size={16} />
-              <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定のみ</span>
-            </button>
+            
+            {/* Filter Buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setFilterMode(m => m === 'revised' ? 'all' : 'revised')}
+                className={`p-1 rounded transition-colors flex items-center gap-1 ${
+                  filterMode === 'revised'
+                    ? 'bg-orange-100 text-orange-600 font-bold'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                }`}
+                title="価格改定ありのみ表示"
+              >
+                <Filter size={16} />
+                <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定のみ</span>
+              </button>
+              <button
+                onClick={() => setFilterMode(m => m === 'notRevised' ? 'all' : 'notRevised')}
+                className={`p-1 rounded transition-colors flex items-center gap-1 ${
+                  filterMode === 'notRevised'
+                    ? 'bg-gray-200 text-gray-700 font-bold'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                }`}
+                title="価格改定なしのみ表示"
+              >
+                <Filter size={16} className="opacity-50" />
+                <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定なし</span>
+              </button>
+            </div>
           </div>
 
           {isSelectionMode ? (
@@ -283,6 +310,7 @@ function App() {
           isSelectionMode={isSelectionMode}
           selectedIds={selectedIds}
           onToggleSelection={handleToggleSelection}
+          stats={stats}
         />
         <CustomerForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingCustomer} existingNumbers={existingNumbers} />
       </Layout>

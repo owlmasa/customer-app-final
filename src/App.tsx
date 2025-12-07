@@ -181,6 +181,11 @@ function App() {
 
   const activeCustomer = activeId ? customers[activeId] : null;
 
+  const dayCounts = DAYS_OF_WEEK.reduce((acc, day) => ({
+    ...acc,
+    [day]: schedules[day]?.length || 0
+  }), {} as Record<DayOfWeek, number>);
+
   return (
     <DndContext 
       sensors={sensors} 
@@ -188,7 +193,11 @@ function App() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <Layout currentDay={currentDay} onDayChange={setCurrentDay} headerActions={
+      <Layout 
+        currentDay={currentDay} 
+        onDayChange={setCurrentDay} 
+        dayCounts={dayCounts}
+        headerActions={
         <>
           {/* Search & Filter - Always Visible (or responsive) */}
           <div className="flex items-center gap-1 md:gap-2 mr-1 md:mr-2 bg-white p-1 rounded-md border border-gray-200">
@@ -311,6 +320,7 @@ function App() {
           selectedIds={selectedIds}
           onToggleSelection={handleToggleSelection}
           stats={stats}
+          filterMode={filterMode}
         />
         <CustomerForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingCustomer} existingNumbers={existingNumbers} />
       </Layout>

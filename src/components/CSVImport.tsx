@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import Papa from 'papaparse';
-import { FileDown } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { Customer } from '../types';
 
 interface Props {
@@ -24,21 +24,12 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
             const name = row['顧客名'];
             const address = row['住所'] || '';
             const remarks = row['備考欄'] || '';
-            const priceRevisionDate = row['価格改定日'] || '';
-            const locationType = row['ロケーション'] === 'インロケ' || row['ロケーション'] === 'アウトロケ' ? row['ロケーション'] : undefined;
-            const isCorporate = row['法人'] === 'TRUE' || row['法人'] === 'true' || row['法人'] === '1';
-            const visitFrequency = ['1', '2', '3', '4', '5', 'A', 'B', 'ゴミ'].includes(row['訪問頻度']) ? row['訪問頻度'] : undefined;
-
             if (customerNumber && name) {
                 importedData.push({
                     customerNumber: String(customerNumber).trim(),
                     name: String(name).trim(),
                     address: String(address).trim(),
                     remarks: String(remarks).trim(),
-                    priceRevisionDate,
-                    locationType,
-                    isCorporate,
-                    visitFrequency
                 });
             }
         });
@@ -57,10 +48,8 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
   return (
     <div>
       <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-      <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none">
-        <FileDown size={16} className="md:w-[18px] md:h-[18px]" />
-        <span className="hidden sm:inline">インポート</span>
-        <span className="inline sm:hidden">取込</span>
+      <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm text-sm font-medium">
+        <Upload size={18} /> CSVインポート
       </button>
     </div>
   );

@@ -9,9 +9,10 @@ interface Props {
   onDayChange: (day: DayOfWeek) => void;
   children: React.ReactNode;
   headerActions?: React.ReactNode;
+  dayCounts: Record<DayOfWeek, number>;
 }
 
-const DroppableTab = ({ day, currentDay, onClick }: { day: DayOfWeek, currentDay: DayOfWeek, onClick: () => void }) => {
+const DroppableTab = ({ day, currentDay, onClick, count }: { day: DayOfWeek, currentDay: DayOfWeek, onClick: () => void, count: number }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `tab-${day}`,
     data: { day }
@@ -29,11 +30,12 @@ const DroppableTab = ({ day, currentDay, onClick }: { day: DayOfWeek, currentDay
     >
       {day}
       {day !== 'その他' && '曜日'}
+      <span className="ml-1.5 text-xs text-gray-400 font-normal">({count})</span>
     </button>
   );
 };
 
-export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions }) => {
+export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions, dayCounts }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm z-10">
@@ -53,7 +55,13 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="-mb-px flex overflow-x-auto no-scrollbar" aria-label="Tabs">
             {DAYS_OF_WEEK.map((day) => (
-              <DroppableTab key={day} day={day} currentDay={currentDay} onClick={() => onDayChange(day)} />
+              <DroppableTab 
+                key={day} 
+                day={day} 
+                currentDay={currentDay} 
+                onClick={() => onDayChange(day)} 
+                count={dayCounts[day] || 0}
+              />
             ))}
           </nav>
         </div>

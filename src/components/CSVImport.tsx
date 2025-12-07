@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import Papa from 'papaparse';
-import { Upload } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import { Customer } from '../types';
 
 interface Props {
@@ -58,8 +58,8 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
     <div>
       <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
       <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none">
-        <Upload size={16} className="md:w-[18px] md:h-[18px]" />
-        <span className="hidden sm:inline">CSVインポート</span>
+        <FileDown size={16} className="md:w-[18px] md:h-[18px]" />
+        <span className="hidden sm:inline">インポート</span>
         <span className="inline sm:hidden">取込</span>
       </button>
     </div>

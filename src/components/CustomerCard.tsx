@@ -79,7 +79,7 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelet
            <span title={customer.remarks} className="truncate flex-1">{customer.remarks}</span>
            {customer.priceRevisionDate && (
              <span className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap" title="価格改定日">
-               {customer.priceRevisionDate}
+               価格改定日: {customer.priceRevisionDate}
              </span>
            )}
         </div>

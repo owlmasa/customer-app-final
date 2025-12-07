@@ -32,3 +32,4 @@ export const SortableCustomerList: React.FC<Props> = ({ customers, onEdit, onDel
     </SortableContext>
   );
 };
+

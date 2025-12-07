@@ -60,6 +60,16 @@ export const CustomerCard: React.FC<Props> = ({
     }
   };
 
+  const handleAddressClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card selection/drag
+    if (!customer.address) return;
+
+    if (window.confirm('Googleマップを開きますか？')) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`;
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <div 
       ref={setNodeRef} 
@@ -103,7 +113,11 @@ export const CustomerCard: React.FC<Props> = ({
             </span>
           )}
         </div>
-        <div className="md:col-span-4 text-sm text-gray-600 truncate">
+        <div 
+          className="md:col-span-4 text-sm text-blue-600 truncate cursor-pointer hover:underline"
+          onClick={handleAddressClick}
+          title="Googleマップで開く"
+        >
            {customer.address}
         </div>
         <div className="md:col-span-3 text-sm text-gray-500 flex items-center gap-2 overflow-hidden">

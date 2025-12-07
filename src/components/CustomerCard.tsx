@@ -66,10 +66,6 @@ export const CustomerCard: React.FC<Props> = ({
   const handleAddressClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card selection/drag
     
-    // If in selection mode, do nothing (let the card click handler handle selection if needed, or just ignore)
-    // Actually, since we stopped propagation, we might want to manually trigger selection if user clicks address in selection mode.
-    // But for now, just preventing the alert is the request.
-    // To make it smoother, we can call onToggleSelection here too if in selection mode.
     if (isSelectionMode) {
       if (onToggleSelection) onToggleSelection(customer.id);
       return;
@@ -118,7 +114,7 @@ export const CustomerCard: React.FC<Props> = ({
       style={style} 
       onClick={handleCardClick}
       className={clsx(
-        "rounded-lg shadow-sm border transition-all bg-white",
+        "rounded-lg shadow-sm border transition-all",
         customer.isCorporate ? 'bg-cyan-50' : 'bg-white',
         isSelectionMode ? 'cursor-pointer hover:bg-gray-50' : 'group',
         isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50' : 'border-gray-200'

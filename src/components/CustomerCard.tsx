@@ -92,39 +92,41 @@ export const CustomerCard: React.FC<Props> = ({
           </div>
         </div>
       ) : (
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 touch-none">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 touch-none self-start mt-2 md:mt-0 md:self-center">
           <GripVertical size={20} />
         </div>
       )}
       
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm self-start mt-1 md:mt-0 md:self-center">
         {index + 1}
       </div>
       
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-2 items-start md:items-center">
         <div className="md:col-span-2 font-mono text-sm text-gray-600 flex items-center">
            <span className="md:hidden text-xs text-gray-400 mr-2">No.</span>{customer.customerNumber}
         </div>
-        <div className="md:col-span-3 font-medium text-gray-900">
+        <div className="md:col-span-3 font-medium text-gray-900 flex items-center">
           {customer.name}
           {customer.visitFrequency && (
-            <span className="ml-2 text-xs px-1.5 py-0.5 bg-gray-100 rounded-md text-gray-600 border border-gray-200">
+            <span className="ml-2 text-xs px-1.5 py-0.5 bg-gray-100 rounded-md text-gray-600 border border-gray-200 whitespace-nowrap">
               {customer.visitFrequency}
             </span>
           )}
         </div>
         <div 
-          className="md:col-span-4 text-sm text-blue-600 truncate cursor-pointer hover:underline"
+          className="md:col-span-4 text-sm text-blue-600 cursor-pointer hover:underline md:truncate break-words"
           onClick={handleAddressClick}
           title="Googleマップで開く"
         >
            {customer.address}
         </div>
-        <div className="md:col-span-3 text-sm text-gray-500 flex items-center gap-2 overflow-hidden">
-           {customer.locationType && <span className="text-xs bg-gray-100 px-1 rounded text-gray-600 flex-shrink-0">{customer.locationType}</span>}
-           <span title={customer.remarks} className="truncate flex-1">{customer.remarks}</span>
+        <div className="md:col-span-3 text-sm text-gray-500 flex flex-wrap md:flex-nowrap items-center gap-2 overflow-hidden">
+           <div className="flex items-center gap-2 flex-1 min-w-0 w-full md:w-auto">
+             {customer.locationType && <span className="text-xs bg-gray-100 px-1 rounded text-gray-600 flex-shrink-0">{customer.locationType}</span>}
+             <span title={customer.remarks} className="truncate">{customer.remarks}</span>
+           </div>
            {customer.priceRevisionDate && (
-             <span className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap" title="価格改定日">
+             <span className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap ml-auto md:ml-0" title="価格改定日">
                価格改定日: {customer.priceRevisionDate}
              </span>
            )}
@@ -132,7 +134,7 @@ export const CustomerCard: React.FC<Props> = ({
       </div>
 
       {!isSelectionMode && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity self-start mt-1 md:mt-0 md:self-center">
           <div className="relative p-2 text-gray-400 hover:text-green-600 transition-colors" title="複製">
             <Copy size={18} />
             <select 

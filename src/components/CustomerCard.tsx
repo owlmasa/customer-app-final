@@ -11,10 +11,22 @@ interface Props {
   onEdit: (customer: Customer) => void;
   onDelete: (id: string) => void;
   onCopy: (id: string, targetDay: DayOfWeek) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
 }
 
-export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelete, onCopy }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: customer.id });
+export const CustomerCard: React.FC<Props> = ({ 
+  customer, 
+  index, 
+  onEdit, 
+  onDelete, 
+  onCopy,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelection
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: customer.id, disabled: isSelectionMode });
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -42,18 +54,38 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelet
     }
   };
 
+  const handleCardClick = () => {
+    if (isSelectionMode && onToggleSelection) {
+      onToggleSelection(customer.id);
+    }
+  };
+
   return (
     <div 
       ref={setNodeRef} 
       style={style} 
+      onClick={handleCardClick}
       className={clsx(
-        "p-3 rounded-lg shadow-sm border border-gray-200 flex items-center gap-3 mb-2 group hover:shadow-md transition-shadow",
-        customer.isCorporate ? 'bg-cyan-50' : 'bg-white'
+        "p-3 rounded-lg shadow-sm border flex items-center gap-3 mb-2 transition-all",
+        customer.isCorporate ? 'bg-cyan-50' : 'bg-white',
+        isSelectionMode ? 'cursor-pointer hover:bg-gray-50' : 'group hover:shadow-md',
+        isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50' : 'border-gray-200'
       )}
     >
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 touch-none">
-        <GripVertical size={20} />
-      </div>
+      {isSelectionMode ? (
+        <div className="p-1">
+          <div className={clsx(
+            "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+            isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
+          )}>
+            {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
+          </div>
+        </div>
+      ) : (
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 touch-none">
+          <GripVertical size={20} />
+        </div>
+      )}
       
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
         {index + 1}
@@ -85,28 +117,30 @@ export const CustomerCard: React.FC<Props> = ({ customer, index, onEdit, onDelet
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="relative p-2 text-gray-400 hover:text-green-600 transition-colors" title="複製">
-          <Copy size={18} />
-          <select 
-            className="absolute inset-0 opacity-0 cursor-pointer" 
-            onChange={handleCopyChange}
-            value=""
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value="" disabled>複製先を選択</option>
-            {DAYS_OF_WEEK.map(day => (
-              <option key={day} value={day}>{day}</option>
-            ))}
-          </select>
+      {!isSelectionMode && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="relative p-2 text-gray-400 hover:text-green-600 transition-colors" title="複製">
+            <Copy size={18} />
+            <select 
+              className="absolute inset-0 opacity-0 cursor-pointer" 
+              onChange={handleCopyChange}
+              value=""
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="" disabled>複製先を選択</option>
+              {DAYS_OF_WEEK.map(day => (
+                <option key={day} value={day}>{day}</option>
+              ))}
+            </select>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(customer); }} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="編集">
+            <Pencil size={18} />
+          </button>
+          <button onClick={handleDeleteClick} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="削除">
+            <Trash2 size={18} />
+          </button>
         </div>
-        <button onClick={() => onEdit(customer)} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="編集">
-          <Pencil size={18} />
-        </button>
-        <button onClick={handleDeleteClick} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="削除">
-          <Trash2 size={18} />
-        </button>
-      </div>
+      )}
     </div>
   );
 };

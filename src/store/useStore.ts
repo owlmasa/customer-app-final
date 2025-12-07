@@ -16,14 +16,18 @@ interface StoreState {
   copyCustomerToDay: (customerId: string, targetDay: DayOfWeek) => void;
   moveCustomerToDay: (customerId: string, targetDay: DayOfWeek) => void;
   
+  // Bulk operations
+  copyCustomersToDay: (customerIds: string[], targetDay: DayOfWeek) => void;
+  moveCustomersToDay: (customerIds: string[], targetDay: DayOfWeek) => void;
+  
   getCustomer: (id: string) => Customer | undefined;
+  removeFromSchedule: (day: DayOfWeek, customerId: string) => void;
 }
 
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       customers: {},
-      // Initialize all days including 'その他'
       schedules: DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: [] }), {} as Record<DayOfWeek, string[]>),
       
       addCustomer: (customerData, day) => {
@@ -35,7 +39,6 @@ export const useStore = create<StoreState>()(
             schedules: { ...state.schedules }
           };
           if (day) {
-             // Ensure the array exists
              if (!newState.schedules[day]) newState.schedules[day] = [];
              newState.schedules[day] = [...newState.schedules[day], id];
           }
@@ -51,7 +54,6 @@ export const useStore = create<StoreState>()(
       
       deleteCustomer: (id) => {
         set((state) => {
-          // Completely remove the customer from all schedules and the customer map
           const newCustomers = { ...state.customers };
           delete newCustomers[id];
           
@@ -69,14 +71,6 @@ export const useStore = create<StoreState>()(
       importCustomers: (newCustomersData, targetDay) => {
         set((state) => {
           const newCustomersMap = { ...state.customers };
-          
-          // Map existing customers by customerNumber to reuse them (preventing duplicates if same number exists)
-          // However, the requirement implies duplicates across days should be independent? 
-          // User said: "if same data is in Mon and Wed, deleting Wed should not delete Mon".
-          // This means we should probably NOT reuse the same ID if it's a different import, OR we treat them as shared references.
-          // If they share the ID, deleting by ID deletes everywhere.
-          // To solve requirement (1), we should only remove the ID from the specific day's schedule in clearSchedule.
-          
           const existingByNumber = Object.values(state.customers).reduce((acc, c) => {
             acc[c.customerNumber] = c.id;
             return acc;
@@ -85,9 +79,6 @@ export const useStore = create<StoreState>()(
           const newIds: string[] = [];
           
           newCustomersData.forEach(c => {
-            // If exists, reuse ID (shared reference). If we want them independent, we should always create new ID.
-            // But "copy" usually implies independent or shared? 
-            // Let's stick to shared ID for same customer number to save space, BUT fix clearSchedule logic.
             if (existingByNumber[c.customerNumber]) {
               const id = existingByNumber[c.customerNumber];
               newCustomersMap[id] = { ...newCustomersMap[id], ...c };
@@ -102,7 +93,6 @@ export const useStore = create<StoreState>()(
           const newSchedules = { ...state.schedules };
           if (targetDay) {
             if (!newSchedules[targetDay]) newSchedules[targetDay] = [];
-            // Use Set to avoid duplicate IDs in the same day
             const currentList = new Set(newSchedules[targetDay]);
             newIds.forEach(id => currentList.add(id));
             newSchedules[targetDay] = Array.from(currentList);
@@ -117,8 +107,6 @@ export const useStore = create<StoreState>()(
       
       clearSchedule: (day) => {
         set((state) => {
-          // Just empty the schedule for that day. Do NOT delete from customers map immediately.
-          // We could implement a cleanup later if needed, but keeping the customer record is safer.
           return {
             schedules: { ...state.schedules, [day]: [] }
           };
@@ -127,13 +115,6 @@ export const useStore = create<StoreState>()(
       
       copyCustomerToDay: (customerId, targetDay) => {
         const state = get();
-        // We just add the SAME ID to the target day. 
-        // This means it's the SAME customer reference (shared).
-        // If the user edits the name in one day, it changes in others. This is usually expected for "same customer".
-        // If they want "Clone as new", we would generate new ID.
-        // Based on "duplicate", usually means "add this customer to that day too".
-        
-        // Check if already in target day
         if (state.schedules[targetDay]?.includes(customerId)) return;
 
         set((state) => ({
@@ -147,7 +128,6 @@ export const useStore = create<StoreState>()(
       moveCustomerToDay: (customerId, targetDay) => {
         const state = get();
         if (state.schedules[targetDay]?.includes(customerId)) {
-            // If already there, just remove from others (effectively merge/move)
              set((state) => {
                 const newSchedules = { ...state.schedules };
                 DAYS_OF_WEEK.forEach(day => {
@@ -162,20 +142,51 @@ export const useStore = create<StoreState>()(
 
         set((state) => {
           const newSchedules = { ...state.schedules };
-          // Remove from all other days
           DAYS_OF_WEEK.forEach(day => {
             newSchedules[day] = newSchedules[day].filter(id => id !== customerId);
           });
-          // Add to target day
           if (!newSchedules[targetDay]) newSchedules[targetDay] = [];
           newSchedules[targetDay] = [...newSchedules[targetDay], customerId];
           return { schedules: newSchedules };
         });
       },
+
+      copyCustomersToDay: (customerIds, targetDay) => {
+        set((state) => {
+          const newSchedules = { ...state.schedules };
+          if (!newSchedules[targetDay]) newSchedules[targetDay] = [];
+          
+          const toAdd = customerIds.filter(id => !newSchedules[targetDay].includes(id));
+          newSchedules[targetDay] = [...newSchedules[targetDay], ...toAdd];
+          
+          return { schedules: newSchedules };
+        });
+      },
+
+      moveCustomersToDay: (customerIds, targetDay) => {
+        set((state) => {
+          const newSchedules = { ...state.schedules };
+          
+          // Remove from all days first (except target if we want to be clever, but filtering all is safer for "move")
+          DAYS_OF_WEEK.forEach(day => {
+             newSchedules[day] = newSchedules[day].filter(id => !customerIds.includes(id));
+          });
+          
+          // Add to target day
+          if (!newSchedules[targetDay]) newSchedules[targetDay] = [];
+          newSchedules[targetDay] = [...newSchedules[targetDay], ...customerIds];
+          
+          return { schedules: newSchedules };
+        });
+      },
       
       getCustomer: (id) => get().customers[id],
+      removeFromSchedule: (day, customerId) => {
+        set((state) => ({
+          schedules: { ...state.schedules, [day]: state.schedules[day].filter(id => id !== customerId) }
+        }));
+      }
     }),
     { name: 'customer-manager-storage' }
   )
 );
-

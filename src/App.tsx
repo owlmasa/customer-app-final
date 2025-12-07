@@ -5,8 +5,8 @@ import { CustomerForm } from './components/CustomerForm';
 import { CSVImport } from './components/CSVImport';
 import { CSVExport } from './components/CSVExport';
 import { useStore } from './store/useStore';
-import { DayOfWeek, Customer } from './types';
-import { Plus, Trash2 } from 'lucide-react';
+import { DayOfWeek, Customer, DAYS_OF_WEEK } from './types';
+import { Plus, Trash2, CheckSquare, X, ArrowRightLeft, Copy } from 'lucide-react';
 import { 
   DndContext, 
   pointerWithin,
@@ -26,6 +26,10 @@ function App() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>(undefined);
   const [activeId, setActiveId] = useState<string | null>(null);
   
+  // Selection mode state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const { 
     customers, 
     schedules, 
@@ -35,7 +39,10 @@ function App() {
     updateSchedule,
     clearSchedule,
     copyCustomerToDay,
-    moveCustomerToDay
+    moveCustomerToDay,
+    removeFromSchedule,
+    moveCustomersToDay,
+    copyCustomersToDay
   } = useStore();
 
   const currentDaySchedule = schedules[currentDay] || [];
@@ -50,6 +57,7 @@ function App() {
   const handleImport = (data: Omit<Customer, 'id'>[]) => importCustomers(data, currentDay);
   
   const handleDragStart = (event: any) => {
+    if (isSelectionMode) return;
     setActiveId(event.active.id);
   };
 
@@ -58,11 +66,11 @@ function App() {
     setActiveId(null);
 
     if (!over) return;
+    if (isSelectionMode) return;
 
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
 
-    // If dropped on a tab (move to another day)
     if (overIdStr.startsWith('tab-')) {
       const targetDay = overIdStr.replace('tab-', '') as DayOfWeek;
       if (targetDay !== currentDay) {
@@ -71,7 +79,6 @@ function App() {
       }
     }
 
-    // If dropped within the list (reorder)
     if (activeIdStr !== overIdStr) {
       const oldIndex = scheduledCustomers.findIndex((c) => c.id === activeIdStr);
       const newIndex = scheduledCustomers.findIndex((c) => c.id === overIdStr);
@@ -83,30 +90,7 @@ function App() {
   };
 
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setIsFormOpen(true); };
-  
-  // For single delete, we probably just want to remove from THIS day, not globally,
-  // unless the user explicitly wants to delete the customer record.
-  // Based on the "clearSchedule" fix, let's assume the user wants to remove the schedule item.
-  // But if they click the trash can on a card, they might mean "delete this visit".
-  // I'll change this to remove from schedule only, to match the "clear" behavior logic.
-  const handleDelete = (id: string) => { 
-      // We need a new function in store for "remove single from schedule" vs "delete customer"
-      // For now, I'll use a direct store manipulation via a new action or existing one.
-      // Wait, useStore has removeFromSchedule? No, I removed it.
-      // Let's add it back or use deleteCustomer (which wipes everything).
-      // User complained about "deleting Mon when deleting Wed".
-      // So I should implement "removeFromCurrentSchedule" instead of global delete.
-      // But wait, I already modified clearSchedule to only clear the schedule.
-      // Let's modify deleteCustomer to only remove from ALL schedules if it's global,
-      // OR create a new function "removeCustomerFromDay".
-      
-      // Actually, the previous deleteCustomer removed from ALL days.
-      // If I want to remove only from THIS day, I need to filter schedules[currentDay].
-      // Let's implement a local removal.
-      const newIds = currentDaySchedule.filter(cId => cId !== id);
-      updateSchedule(currentDay, newIds);
-  };
-
+  const handleDelete = (id: string) => { removeFromSchedule(currentDay, id); };
   const handleCopy = (id: string, targetDay: DayOfWeek) => { copyCustomerToDay(id, targetDay); };
   const handleAdd = () => { setEditingCustomer(undefined); setIsFormOpen(true); };
   const handleFormSubmit = (data: Omit<Customer, 'id'>) => {
@@ -116,6 +100,43 @@ function App() {
   const handleClearSchedule = () => {
     if (window.confirm(`${currentDay}${currentDay !== 'その他' ? '曜日' : ''}のデータを全て削除しますか？この操作は取り消せません。`)) {
       clearSchedule(currentDay);
+    }
+  };
+
+  // Selection Handlers
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedIds(new Set());
+  };
+
+  const handleToggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) newSelected.delete(id);
+    else newSelected.add(id);
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkMove = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const targetDay = e.target.value as DayOfWeek;
+    if (targetDay && selectedIds.size > 0) {
+       if (window.confirm(`選択した${selectedIds.size}件を${targetDay}${targetDay !== 'その他' ? '曜日' : ''}に移動しますか？`)) {
+         moveCustomersToDay(Array.from(selectedIds), targetDay);
+         setIsSelectionMode(false);
+         setSelectedIds(new Set());
+       }
+       e.target.value = "";
+    }
+  };
+
+  const handleBulkCopy = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const targetDay = e.target.value as DayOfWeek;
+    if (targetDay && selectedIds.size > 0) {
+       if (window.confirm(`選択した${selectedIds.size}件を${targetDay}${targetDay !== 'その他' ? '曜日' : ''}に複製しますか？`)) {
+         copyCustomersToDay(Array.from(selectedIds), targetDay);
+         setIsSelectionMode(false);
+         setSelectedIds(new Set());
+       }
+       e.target.value = "";
     }
   };
 
@@ -130,17 +151,68 @@ function App() {
     >
       <Layout currentDay={currentDay} onDayChange={setCurrentDay} headerActions={
         <>
-          <CSVExport customers={Object.values(customers)} />
-          <CSVImport onImport={handleImport} />
-          <button onClick={handleClearSchedule} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none" title="一括削除">
-            <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
-            <span className="hidden sm:inline">一括削除</span>
-          </button>
-          <button onClick={handleAdd} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none">
-            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> 
-            <span className="hidden sm:inline">新規追加</span>
-            <span className="inline sm:hidden">追加</span>
-          </button>
+          {isSelectionMode ? (
+            <>
+              <div className="flex items-center gap-2 mr-2 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100 text-blue-700 text-sm font-bold">
+                 <CheckSquare size={16} /> {selectedIds.size}件選択中
+              </div>
+              
+              <div className="relative flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap cursor-pointer">
+                <ArrowRightLeft size={16} className="md:w-[18px] md:h-[18px]" />
+                <span className="hidden sm:inline">移動</span>
+                <span className="inline sm:hidden">移動</span>
+                <select 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                  onChange={handleBulkMove}
+                  value=""
+                >
+                  <option value="" disabled>移動先を選択</option>
+                  {DAYS_OF_WEEK.map(day => (
+                     <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap cursor-pointer">
+                <Copy size={16} className="md:w-[18px] md:h-[18px]" />
+                <span className="hidden sm:inline">複製</span>
+                <span className="inline sm:hidden">複製</span>
+                <select 
+                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                  onChange={handleBulkCopy}
+                  value=""
+                >
+                  <option value="" disabled>複製先を選択</option>
+                  {DAYS_OF_WEEK.map(day => (
+                     <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button onClick={toggleSelectionMode} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none">
+                <X size={16} className="md:w-[18px] md:h-[18px]" />
+                <span>完了</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={toggleSelectionMode} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border border-gray-300 cursor-pointer appearance-none">
+                <CheckSquare size={16} className="md:w-[18px] md:h-[18px]" />
+                <span className="hidden sm:inline">複数選択</span>
+              </button>
+              <CSVExport customers={Object.values(customers)} />
+              <CSVImport onImport={handleImport} />
+              <button onClick={handleClearSchedule} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none" title="一括削除">
+                <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
+                <span className="hidden sm:inline">一括削除</span>
+              </button>
+              <button onClick={handleAdd} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none">
+                <Plus size={16} className="md:w-[18px] md:h-[18px]" /> 
+                <span className="hidden sm:inline">新規追加</span>
+                <span className="inline sm:hidden">追加</span>
+              </button>
+            </>
+          )}
         </>
       }>
         <SortableCustomerList 
@@ -148,6 +220,9 @@ function App() {
           onEdit={handleEdit} 
           onDelete={handleDelete}
           onCopy={handleCopy}
+          isSelectionMode={isSelectionMode}
+          selectedIds={selectedIds}
+          onToggleSelection={handleToggleSelection}
         />
         <CustomerForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingCustomer} existingNumbers={existingNumbers} />
       </Layout>
@@ -162,4 +237,3 @@ function App() {
   );
 }
 export default App;
-

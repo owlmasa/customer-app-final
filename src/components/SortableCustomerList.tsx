@@ -8,9 +8,20 @@ interface Props {
   onEdit: (customer: Customer) => void;
   onDelete: (id: string) => void;
   onCopy: (id: string, targetDay: DayOfWeek) => void;
+  isSelectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (id: string) => void;
 }
 
-export const SortableCustomerList: React.FC<Props> = ({ customers, onEdit, onDelete, onCopy }) => {
+export const SortableCustomerList: React.FC<Props> = ({ 
+  customers, 
+  onEdit, 
+  onDelete, 
+  onCopy,
+  isSelectionMode,
+  selectedIds,
+  onToggleSelection
+}) => {
   return (
     <SortableContext items={customers.map(c => c.id)} strategy={verticalListSortingStrategy}>
       <div className="space-y-2 pb-20">
@@ -21,7 +32,17 @@ export const SortableCustomerList: React.FC<Props> = ({ customers, onEdit, onDel
           <div className="col-span-3">備考</div>
         </div>
         {customers.map((customer, index) => (
-          <CustomerCard key={customer.id} customer={customer} index={index} onEdit={onEdit} onDelete={onDelete} onCopy={onCopy} />
+          <CustomerCard 
+            key={customer.id} 
+            customer={customer} 
+            index={index} 
+            onEdit={onEdit} 
+            onDelete={onDelete} 
+            onCopy={onCopy}
+            isSelectionMode={isSelectionMode}
+            isSelected={selectedIds?.has(customer.id)}
+            onToggleSelection={onToggleSelection}
+          />
         ))}
         {customers.length === 0 && (
             <div className="text-center py-10 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
@@ -32,4 +53,3 @@ export const SortableCustomerList: React.FC<Props> = ({ customers, onEdit, onDel
     </SortableContext>
   );
 };
-

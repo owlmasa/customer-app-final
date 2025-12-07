@@ -59,15 +59,22 @@ export const CustomerCard: React.FC<Props> = ({
     if (isSelectionMode && onToggleSelection) {
       onToggleSelection(customer.id);
     } else {
-      // Toggle accordion only on mobile (md and up uses different layout)
-      // We can check window width or just rely on CSS hiding/showing logic,
-      // but logically we want the toggle to work.
       setIsExpanded(!isExpanded);
     }
   };
 
   const handleAddressClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card selection/drag
+    
+    // If in selection mode, do nothing (let the card click handler handle selection if needed, or just ignore)
+    // Actually, since we stopped propagation, we might want to manually trigger selection if user clicks address in selection mode.
+    // But for now, just preventing the alert is the request.
+    // To make it smoother, we can call onToggleSelection here too if in selection mode.
+    if (isSelectionMode) {
+      if (onToggleSelection) onToggleSelection(customer.id);
+      return;
+    }
+
     if (!customer.address) return;
 
     if (window.confirm('Googleマップを開きますか？')) {
@@ -160,7 +167,10 @@ export const CustomerCard: React.FC<Props> = ({
             
             {/* Row 2: Address (Truncated on mobile collapsed) */}
             <div 
-              className="text-xs text-blue-600 cursor-pointer hover:underline truncate"
+              className={clsx(
+                "text-xs truncate",
+                isSelectionMode ? "text-gray-600" : "text-blue-600 cursor-pointer hover:underline"
+              )}
               onClick={handleAddressClick}
             >
                {customer.address}
@@ -194,7 +204,10 @@ export const CustomerCard: React.FC<Props> = ({
               )}
             </div>
             <div 
-              className="col-span-4 text-sm text-blue-600 cursor-pointer hover:underline truncate"
+              className={clsx(
+                "col-span-4 text-sm truncate",
+                isSelectionMode ? "text-gray-600" : "text-blue-600 cursor-pointer hover:underline"
+              )}
               onClick={handleAddressClick}
               title={customer.address}
             >

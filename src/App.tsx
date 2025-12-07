@@ -162,7 +162,7 @@ function App() {
                 <span className="hidden sm:inline">移動</span>
                 <span className="inline sm:hidden">移動</span>
                 <select 
-                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                  className="absolute inset-0 opacity-0 cursor-pointer text-gray-900" 
                   onChange={handleBulkMove}
                   value=""
                 >
@@ -178,7 +178,7 @@ function App() {
                 <span className="hidden sm:inline">複製</span>
                 <span className="inline sm:hidden">複製</span>
                 <select 
-                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                  className="absolute inset-0 opacity-0 cursor-pointer text-gray-900" 
                   onChange={handleBulkCopy}
                   value=""
                 >

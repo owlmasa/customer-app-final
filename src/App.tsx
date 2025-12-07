@@ -222,26 +222,26 @@ function App() {
             <div className="flex gap-1">
               <button
                 onClick={() => setFilterMode(m => m === 'revised' ? 'all' : 'revised')}
-                className={`p-1 rounded transition-colors flex items-center gap-1 ${
+                className={`p-1 rounded transition-all flex items-center gap-1 ${
                   filterMode === 'revised'
-                    ? 'bg-orange-100 text-orange-600 font-bold'
-                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                    ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-300 ring-offset-1'
+                    : 'bg-white text-gray-400 border border-gray-200 hover:text-orange-500 hover:border-orange-200 hover:bg-orange-50'
                 }`}
                 title="価格改定ありのみ表示"
               >
-                <Filter size={16} />
+                <Filter size={16} className={filterMode === 'revised' ? 'fill-white' : ''} />
                 <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定のみ</span>
               </button>
               <button
                 onClick={() => setFilterMode(m => m === 'notRevised' ? 'all' : 'notRevised')}
-                className={`p-1 rounded transition-colors flex items-center gap-1 ${
+                className={`p-1 rounded transition-all flex items-center gap-1 ${
                   filterMode === 'notRevised'
-                    ? 'bg-gray-200 text-gray-700 font-bold'
-                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                    ? 'bg-gray-600 text-white shadow-md ring-2 ring-gray-400 ring-offset-1'
+                    : 'bg-white text-gray-400 border border-gray-200 hover:text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                 }`}
                 title="価格改定なしのみ表示"
               >
-                <Filter size={16} className="opacity-50" />
+                <Filter size={16} className={filterMode === 'notRevised' ? 'fill-white' : 'opacity-50'} />
                 <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定なし</span>
               </button>
             </div>

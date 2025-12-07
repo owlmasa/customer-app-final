@@ -6,7 +6,7 @@ import { CSVImport } from './components/CSVImport';
 import { CSVExport } from './components/CSVExport';
 import { useStore } from './store/useStore';
 import { DayOfWeek, Customer, DAYS_OF_WEEK } from './types';
-import { Plus, Trash2, CheckSquare, X, ArrowRightLeft, Copy } from 'lucide-react';
+import { Plus, Trash2, CheckSquare, X, ArrowRightLeft, Copy, Search, Filter } from 'lucide-react';
 import { 
   DndContext, 
   pointerWithin,
@@ -30,6 +30,10 @@ function App() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showPriceRevisionOnly, setShowPriceRevisionOnly] = useState(false);
+
   const { 
     customers, 
     schedules, 
@@ -46,7 +50,19 @@ function App() {
   } = useStore();
 
   const currentDaySchedule = schedules[currentDay] || [];
-  const scheduledCustomers = currentDaySchedule.map(id => customers[id]).filter(Boolean);
+  
+  // Determine base list: Search Results (Global) or Current Day Schedule
+  const baseCustomers = searchQuery
+    ? Object.values(customers).filter(c => 
+        c.name.includes(searchQuery) || c.customerNumber.includes(searchQuery)
+      )
+    : currentDaySchedule.map(id => customers[id]).filter(Boolean);
+
+  // Apply Filter (Price Revision)
+  const displayedCustomers = showPriceRevisionOnly
+    ? baseCustomers.filter(c => c.priceRevisionDate)
+    : baseCustomers;
+
   const existingNumbers = Object.values(customers).map(c => c.customerNumber);
 
   const sensors = useSensors(
@@ -57,7 +73,7 @@ function App() {
   const handleImport = (data: Omit<Customer, 'id'>[]) => importCustomers(data, currentDay);
   
   const handleDragStart = (event: any) => {
-    if (isSelectionMode) return;
+    if (isSelectionMode || searchQuery) return; // Disable drag in selection or search mode
     setActiveId(event.active.id);
   };
 
@@ -66,7 +82,7 @@ function App() {
     setActiveId(null);
 
     if (!over) return;
-    if (isSelectionMode) return;
+    if (isSelectionMode || searchQuery) return; // Disable drag in selection or search mode
 
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
@@ -80,17 +96,29 @@ function App() {
     }
 
     if (activeIdStr !== overIdStr) {
-      const oldIndex = scheduledCustomers.findIndex((c) => c.id === activeIdStr);
-      const newIndex = scheduledCustomers.findIndex((c) => c.id === overIdStr);
+      const oldIndex = baseCustomers.findIndex((c) => c.id === activeIdStr);
+      const newIndex = baseCustomers.findIndex((c) => c.id === overIdStr);
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrder = arrayMove(scheduledCustomers, oldIndex, newIndex);
+        // Only update schedule if we are NOT in search mode (which is guaranteed by the check above)
+        const newOrder = arrayMove(baseCustomers, oldIndex, newIndex);
         updateSchedule(currentDay, newOrder.map(c => c.id));
       }
     }
   };
 
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setIsFormOpen(true); };
-  const handleDelete = (id: string) => { removeFromSchedule(currentDay, id); };
+  
+  // Note: logic might need review for search mode delete, but sticking to requested "remove from schedule"
+  const handleDelete = (id: string) => { 
+    if (searchQuery) {
+       if(window.confirm('検索結果からの削除は、現在の曜日のスケジュールから削除されますが、よろしいですか？')) {
+         removeFromSchedule(currentDay, id);
+       }
+    } else {
+      removeFromSchedule(currentDay, id); 
+    }
+  };
+  
   const handleCopy = (id: string, targetDay: DayOfWeek) => { copyCustomerToDay(id, targetDay); };
   const handleAdd = () => { setEditingCustomer(undefined); setIsFormOpen(true); };
   const handleFormSubmit = (data: Omit<Customer, 'id'>) => {
@@ -151,10 +179,42 @@ function App() {
     >
       <Layout currentDay={currentDay} onDayChange={setCurrentDay} headerActions={
         <>
+          {/* Search & Filter - Always Visible (or responsive) */}
+          <div className="flex items-center gap-1 md:gap-2 mr-1 md:mr-2 bg-white p-1 rounded-md border border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+              <input
+                type="text"
+                placeholder="検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-7 pr-2 py-1 text-xs md:text-sm border-none bg-transparent focus:outline-none w-24 md:w-32 lg:w-40"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <div className="h-4 w-px bg-gray-200 mx-1"></div>
+            <button
+              onClick={() => setShowPriceRevisionOnly(!showPriceRevisionOnly)}
+              className={`p-1 rounded transition-colors flex items-center gap-1 ${
+                showPriceRevisionOnly
+                  ? 'bg-orange-100 text-orange-600'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+              title="価格改定ありのみ表示"
+            >
+              <Filter size={16} />
+              <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定のみ</span>
+            </button>
+          </div>
+
           {isSelectionMode ? (
             <>
-              <div className="flex items-center gap-2 mr-2 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100 text-blue-700 text-sm font-bold">
-                 <CheckSquare size={16} /> {selectedIds.size}件選択中
+              <div className="flex items-center gap-2 mr-2 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100 text-blue-700 text-sm font-bold whitespace-nowrap">
+                 <CheckSquare size={16} /> <span className="hidden sm:inline">{selectedIds.size}件</span><span className="inline sm:hidden">{selectedIds.size}</span>
               </div>
               
               <div className="relative flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap cursor-pointer">
@@ -216,7 +276,7 @@ function App() {
         </>
       }>
         <SortableCustomerList 
-          customers={scheduledCustomers} 
+          customers={displayedCustomers} 
           onEdit={handleEdit} 
           onDelete={handleDelete}
           onCopy={handleCopy}

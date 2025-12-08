@@ -71,31 +71,19 @@ export const useStore = create<StoreState>()(
       importCustomers: (newCustomersData, targetDay) => {
         set((state) => {
           const newCustomersMap = { ...state.customers };
-          const existingByNumber = Object.values(state.customers).reduce((acc, c) => {
-            acc[c.customerNumber] = c.id;
-            return acc;
-          }, {} as Record<string, string>);
-          
           const newIds: string[] = [];
           
           newCustomersData.forEach(c => {
-            if (existingByNumber[c.customerNumber]) {
-              const id = existingByNumber[c.customerNumber];
-              newCustomersMap[id] = { ...newCustomersMap[id], ...c };
-              newIds.push(id);
-            } else {
-              const id = uuidv4();
-              newCustomersMap[id] = { ...c, id };
-              newIds.push(id);
-            }
+             // Always create a new entry for each import, ensuring independence
+             const id = uuidv4();
+             newCustomersMap[id] = { ...c, id };
+             newIds.push(id);
           });
           
           const newSchedules = { ...state.schedules };
           if (targetDay) {
             if (!newSchedules[targetDay]) newSchedules[targetDay] = [];
-            const currentList = new Set(newSchedules[targetDay]);
-            newIds.forEach(id => currentList.add(id));
-            newSchedules[targetDay] = Array.from(currentList);
+            newSchedules[targetDay] = [...newSchedules[targetDay], ...newIds];
           }
           return { customers: newCustomersMap, schedules: newSchedules };
         });
@@ -115,12 +103,18 @@ export const useStore = create<StoreState>()(
       
       copyCustomerToDay: (customerId, targetDay) => {
         const state = get();
-        if (state.schedules[targetDay]?.includes(customerId)) return;
+        const originalCustomer = state.customers[customerId];
+        if (!originalCustomer) return;
+
+        // Create a DEEP COPY with a new ID
+        const newId = uuidv4();
+        const newCustomer = { ...originalCustomer, id: newId };
 
         set((state) => ({
+          customers: { ...state.customers, [newId]: newCustomer },
           schedules: {
             ...state.schedules,
-            [targetDay]: [...(state.schedules[targetDay] || []), customerId]
+            [targetDay]: [...(state.schedules[targetDay] || []), newId]
           }
         }));
       },
@@ -152,15 +146,26 @@ export const useStore = create<StoreState>()(
       },
 
       copyCustomersToDay: (customerIds, targetDay) => {
-        set((state) => {
-          const newSchedules = { ...state.schedules };
-          if (!newSchedules[targetDay]) newSchedules[targetDay] = [];
-          
-          const toAdd = customerIds.filter(id => !newSchedules[targetDay].includes(id));
-          newSchedules[targetDay] = [...newSchedules[targetDay], ...toAdd];
-          
-          return { schedules: newSchedules };
+        const state = get();
+        const newCustomers: Record<string, Customer> = {};
+        const newIds: string[] = [];
+
+        customerIds.forEach(id => {
+          const original = state.customers[id];
+          if (original) {
+             const newId = uuidv4();
+             newCustomers[newId] = { ...original, id: newId };
+             newIds.push(newId);
+          }
         });
+
+        set((state) => ({
+          customers: { ...state.customers, ...newCustomers },
+          schedules: {
+            ...state.schedules,
+            [targetDay]: [...(state.schedules[targetDay] || []), ...newIds]
+          }
+        }));
       },
 
       moveCustomersToDay: (customerIds, targetDay) => {

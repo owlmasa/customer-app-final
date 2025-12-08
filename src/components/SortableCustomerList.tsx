@@ -18,6 +18,8 @@ interface Props {
     rate: number;
   };
   filterMode?: 'all' | 'revised' | 'notRevised';
+  onToggleAll?: () => void;
+  allSelected?: boolean;
 }
 
 export const SortableCustomerList: React.FC<Props> = ({ 
@@ -29,7 +31,9 @@ export const SortableCustomerList: React.FC<Props> = ({
   selectedIds,
   onToggleSelection,
   stats,
-  filterMode
+  filterMode,
+  onToggleAll,
+  allSelected
 }) => {
   return (
     <SortableContext items={customers.map(c => c.id)} strategy={verticalListSortingStrategy}>
@@ -49,7 +53,20 @@ export const SortableCustomerList: React.FC<Props> = ({
           </div>
         )}
 
-        <div className="hidden md:grid grid-cols-12 gap-2 px-16 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="hidden md:grid grid-cols-12 gap-2 px-16 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider relative">
+          {isSelectionMode && (
+            <div 
+              className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer p-1"
+              onClick={onToggleAll}
+              title="全選択/解除"
+            >
+              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                allSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
+              }`}>
+                {allSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
+              </div>
+            </div>
+          )}
           <div className="col-span-2">得意先番号</div>
           <div className="col-span-3">顧客名</div>
           <div className="col-span-4">住所</div>

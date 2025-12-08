@@ -186,6 +186,21 @@ function App() {
     [day]: schedules[day]?.length || 0
   }), {} as Record<DayOfWeek, number>);
 
+  const handleToggleAll = () => {
+    const displayedIds = displayedCustomers.map(c => c.id);
+    const allSelected = displayedIds.length > 0 && displayedIds.every(id => selectedIds.has(id));
+    
+    const newSelected = new Set(selectedIds);
+    if (allSelected) {
+      displayedIds.forEach(id => newSelected.delete(id));
+    } else {
+      displayedIds.forEach(id => newSelected.add(id));
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const allSelected = displayedCustomers.length > 0 && displayedCustomers.every(c => selectedIds.has(c.id));
+
   return (
     <DndContext 
       sensors={sensors} 
@@ -321,6 +336,8 @@ function App() {
           onToggleSelection={handleToggleSelection}
           stats={stats}
           filterMode={filterMode}
+          onToggleAll={handleToggleAll}
+          allSelected={allSelected}
         />
         <CustomerForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingCustomer} existingNumbers={existingNumbers} />
       </Layout>

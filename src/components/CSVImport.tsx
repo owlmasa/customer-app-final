@@ -25,11 +25,19 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
             const address = row['住所'] || '';
             const remarks = row['備考欄'] || '';
             if (customerNumber && name) {
+                // Handle new Trash column or fallback to checking 'ゴミ' in Visit Frequency
+                const isTrash = (row['ゴミ回収'] === 'TRUE' || row['ゴミ回収'] === 'true') || row['訪問頻度'] === 'ゴミ';
+                
                 importedData.push({
                     customerNumber: String(customerNumber).trim(),
                     name: String(name).trim(),
                     address: String(address).trim(),
                     remarks: String(remarks).trim(),
+                    isCorporate: row['法人'] === 'TRUE' || row['法人'] === 'true',
+                    priceRevisionDate: row['価格改定日'],
+                    visitFrequency: (row['訪問頻度'] === 'ゴミ' ? undefined : row['訪問頻度']) as any,
+                    isTrashCollection: isTrash,
+                    locationType: row['ロケーション'] as any,
                 });
             }
         });

@@ -154,6 +154,11 @@ export const CustomerCard: React.FC<Props> = ({
                   {customer.visitFrequency}
                 </span>
               )}
+              {customer.isTrashCollection && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 rounded border border-blue-200 whitespace-nowrap text-blue-600">
+                  ゴミ
+                </span>
+              )}
               {customer.priceRevisionDate && (
                 <span className="text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded whitespace-nowrap">
                   改定済
@@ -196,6 +201,11 @@ export const CustomerCard: React.FC<Props> = ({
               {customer.visitFrequency && (
                 <span className="ml-2 text-xs px-1.5 py-0.5 bg-gray-100 rounded-md text-gray-600 border border-gray-200 whitespace-nowrap">
                   {customer.visitFrequency}
+                </span>
+              )}
+              {customer.isTrashCollection && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 bg-blue-100 rounded-md text-blue-600 border border-blue-200 whitespace-nowrap">
+                  ゴミ
                 </span>
               )}
             </div>

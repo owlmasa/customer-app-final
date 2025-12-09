@@ -10,7 +10,7 @@ interface Props {
   existingNumbers: string[];
 }
 
-const VISIT_FREQUENCIES = ['1', '2', '3', '4', '5', 'A', 'B', 'ゴミ'] as const;
+const VISIT_FREQUENCIES = ['1', '2', '3', '4', '5', 'A', 'B'] as const;
 
 export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initialData, existingNumbers }) => {
   const [formData, setFormData] = useState<Omit<Customer, 'id'>>({ 
@@ -19,6 +19,7 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
     address: '', 
     remarks: '',
     isCorporate: false,
+    isTrashCollection: false,
     priceRevisionDate: '',
     locationType: undefined,
     visitFrequency: undefined
@@ -33,9 +34,10 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
         address: initialData.address, 
         remarks: initialData.remarks,
         isCorporate: initialData.isCorporate || false,
+        isTrashCollection: initialData.isTrashCollection || initialData.visitFrequency === 'ゴミ',
         priceRevisionDate: initialData.priceRevisionDate || '',
         locationType: initialData.locationType,
-        visitFrequency: initialData.visitFrequency
+        visitFrequency: initialData.visitFrequency === 'ゴミ' ? undefined : initialData.visitFrequency
       });
     } else {
       setFormData({ 
@@ -44,6 +46,7 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
         address: '', 
         remarks: '',
         isCorporate: false,
+        isTrashCollection: false,
         priceRevisionDate: '',
         locationType: undefined,
         visitFrequency: undefined
@@ -81,25 +84,37 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">得意先番号 *</label>
-            <input type="text" className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${errors.customerNumber ? 'border-red-500' : 'border-gray-300'}`} value={formData.customerNumber} onChange={(e) => setFormData({ ...formData, customerNumber: e.target.value })} />
+            <input type="text" className={`w-full h-10 leading-normal px-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${errors.customerNumber ? 'border-red-500' : 'border-gray-300'}`} value={formData.customerNumber} onChange={(e) => setFormData({ ...formData, customerNumber: e.target.value })} />
             {errors.customerNumber && <p className="text-red-500 text-xs mt-1">{errors.customerNumber}</p>}
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">顧客名 *</label>
-            <input type="text" className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${errors.name ? 'border-red-500' : 'border-gray-300'}`} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+            <input type="text" className={`w-full h-10 leading-normal px-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${errors.name ? 'border-red-500' : 'border-gray-300'}`} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
-          <div className="flex items-center gap-2">
-            <input 
-              type="checkbox" 
-              id="isCorporate"
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              checked={formData.isCorporate}
-              onChange={(e) => setFormData({ ...formData, isCorporate: e.target.checked })}
-            />
-            <label htmlFor="isCorporate" className="text-sm font-medium text-gray-700">法人</label>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="isCorporate"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                checked={formData.isCorporate}
+                onChange={(e) => setFormData({ ...formData, isCorporate: e.target.checked })}
+              />
+              <label htmlFor="isCorporate" className="text-sm font-medium text-gray-700">法人</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="isTrashCollection"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                checked={formData.isTrashCollection}
+                onChange={(e) => setFormData({ ...formData, isTrashCollection: e.target.checked })}
+              />
+              <label htmlFor="isTrashCollection" className="text-sm font-medium text-gray-700">ゴミ回収</label>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

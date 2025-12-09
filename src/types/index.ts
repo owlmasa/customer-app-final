@@ -9,6 +9,7 @@ export interface Customer {
   priceRevisionDate?: string; // 価格改定日
   locationType?: 'インロケ' | 'アウトロケ'; // ロケーション
   isCorporate?: boolean; // 法人かどうか
+  isTrashCollection?: boolean; // ゴミ回収
   visitFrequency?: '1' | '2' | '3' | '4' | '5' | 'A' | 'B' | 'ゴミ'; // 訪問頻度
 }
 

@@ -9,11 +9,11 @@ interface Props {
 export const CSVExport: React.FC<Props> = ({ customers }) => {
   const handleExport = () => {
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-    const header = "得意先番号,顧客名,法人,価格改定日,訪問頻度,ロケーション,住所,備考欄\n";
+    const header = "得意先番号,顧客名,法人,価格改定日,訪問頻度,ゴミ回収,ロケーション,住所,備考欄\n";
     
     const content = customers.map(c => {
         const escape = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
-        return `${escape(c.customerNumber)},${escape(c.name)},${c.isCorporate ? 'TRUE' : 'FALSE'},${escape(c.priceRevisionDate || '')},${escape(c.visitFrequency || '')},${escape(c.locationType || '')},${escape(c.address)},${escape(c.remarks)}`;
+        return `${escape(c.customerNumber)},${escape(c.name)},${c.isCorporate ? 'TRUE' : 'FALSE'},${escape(c.priceRevisionDate || '')},${escape(c.visitFrequency || '')},${c.isTrashCollection ? 'TRUE' : 'FALSE'},${escape(c.locationType || '')},${escape(c.address)},${escape(c.remarks)}`;
     }).join("\n");
 
     const blob = new Blob([bom, header + content], { type: "text/csv" });

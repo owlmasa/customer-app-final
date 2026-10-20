@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Customer, DAYS_OF_WEEK, DayOfWeek } from '../types';
+import { Customer, DAYS_OF_WEEK, DayOfWeek, sanitizeProducts } from '../types';
 import { GripVertical, Pencil, Trash2, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -28,6 +28,7 @@ export const CustomerCard: React.FC<Props> = ({
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: customer.id, disabled: isSelectionMode });
   const [isExpanded, setIsExpanded] = useState(false);
+  const products = sanitizeProducts(customer.maker, customer.newProducts);
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -159,9 +160,14 @@ export const CustomerCard: React.FC<Props> = ({
                   ゴミ
                 </span>
               )}
-              {customer.priceRevisionDate && (
+              {customer.maker && (
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded whitespace-nowrap font-bold">
+                  {customer.maker}
+                </span>
+              )}
+              {products.length > 0 && (
                 <span className="text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded whitespace-nowrap">
-                  改定済
+                  新商品{products.length}
                 </span>
               )}
             </div>
@@ -183,7 +189,8 @@ export const CustomerCard: React.FC<Props> = ({
                 <div className="grid grid-cols-1 gap-2">
                   <div className="flex gap-2"><span className="text-gray-400 w-16">No.</span><span className="font-mono">{customer.customerNumber}</span></div>
                   {customer.locationType && <div className="flex gap-2"><span className="text-gray-400 w-16">ロケ</span><span>{customer.locationType}</span></div>}
-                  {customer.priceRevisionDate && <div className="flex gap-2"><span className="text-gray-400 w-16">改定日</span><span>{customer.priceRevisionDate}</span></div>}
+                  {customer.maker && <div className="flex gap-2"><span className="text-gray-400 w-16">メーカー</span><span>{customer.maker}</span></div>}
+                  {customer.maker && <div className="flex gap-2"><span className="text-gray-400 w-16 flex-shrink-0">新商品</span><span>{products.length > 0 ? products.join('・') : '未投入'}</span></div>}
                   <div className="flex gap-2"><span className="text-gray-400 w-16 flex-shrink-0">備考</span><span className="whitespace-pre-wrap">{customer.remarks}</span></div>
                 </div>
                 {!isSelectionMode && <ActionButtons />}
@@ -222,9 +229,9 @@ export const CustomerCard: React.FC<Props> = ({
             <div className="col-span-3 text-sm text-gray-500 flex items-center gap-2 overflow-hidden">
                {customer.locationType && <span className="text-xs bg-gray-100 px-1 rounded text-gray-600 flex-shrink-0">{customer.locationType}</span>}
                <span title={customer.remarks} className="truncate flex-1">{customer.remarks}</span>
-               {customer.priceRevisionDate && (
-                 <span className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap" title="価格改定日">
-                   価格改定日: {customer.priceRevisionDate}
+               {customer.maker && (
+                 <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap font-bold" title={products.length > 0 ? `新商品: ${products.join('・')}` : '新商品: 未投入'}>
+                   {customer.maker}{products.length > 0 ? ` ${products.join('・')}` : ''}
                  </span>
                )}
             </div>

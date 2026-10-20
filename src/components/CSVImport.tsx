@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import Papa from 'papaparse';
 import { Upload } from 'lucide-react';
-import { Customer } from '../types';
+import { Customer, MAKERS, Maker, sanitizeProducts } from '../types';
 
 interface Props {
   onImport: (customers: Omit<Customer, 'id'>[]) => void;
@@ -26,6 +26,8 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
             const remarks = row['備考欄'] || '';
             if (customerNumber && name) {
                 // Handle new Trash column or fallback to checking 'ゴミ' in Visit Frequency
+                const makerRaw = String(row['メーカー'] || '').trim().toUpperCase();
+                const maker = MAKERS.includes(makerRaw as Maker) ? (makerRaw as Maker) : undefined;
                 const isTrash = (row['ゴミ回収'] === 'TRUE' || row['ゴミ回収'] === 'true') || row['訪問頻度'] === 'ゴミ';
                 
                 importedData.push({
@@ -34,7 +36,8 @@ export const CSVImport: React.FC<Props> = ({ onImport }) => {
                     address: String(address).trim(),
                     remarks: String(remarks).trim(),
                     isCorporate: row['法人'] === 'TRUE' || row['法人'] === 'true',
-                    priceRevisionDate: row['価格改定日'],
+                    maker,
+                    newProducts: sanitizeProducts(maker, String(row['新商品'] || '').split(/[\/・、,]/).map(p => p.trim()).filter(Boolean)),
                     visitFrequency: (row['訪問頻度'] === 'ゴミ' ? undefined : row['訪問頻度']) as any,
                     isTrashCollection: isTrash,
                     locationType: row['ロケーション'] as any,

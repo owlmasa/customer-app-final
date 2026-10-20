@@ -11,13 +11,6 @@ interface Props {
   isSelectionMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelection?: (id: string) => void;
-  stats?: {
-    total: number;
-    revised: number;
-    notRevised: number;
-    rate: number;
-  };
-  filterMode?: 'all' | 'revised' | 'notRevised';
   onToggleAll?: () => void;
   allSelected?: boolean;
 }
@@ -30,29 +23,12 @@ export const SortableCustomerList: React.FC<Props> = ({
   isSelectionMode,
   selectedIds,
   onToggleSelection,
-  stats,
-  filterMode,
   onToggleAll,
   allSelected
 }) => {
   return (
     <SortableContext items={customers.map(c => c.id)} strategy={verticalListSortingStrategy}>
       <div className="space-y-2 pb-20">
-        {filterMode === 'revised' && stats && (
-          <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mb-4 text-sm text-orange-800 flex items-center justify-between sm:justify-start sm:gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-orange-600">実施状況:</span>
-              <span className="font-bold text-base">{stats.revised}件</span>
-              <span className="text-gray-400">/</span>
-              <span className="font-medium text-gray-600">{stats.total}件</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-orange-600">改定率:</span>
-              <span className="font-bold text-lg">{stats.rate}%</span>
-            </div>
-          </div>
-        )}
-
         <div className="hidden md:grid grid-cols-12 gap-2 px-16 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider relative">
           {isSelectionMode && (
             <div 

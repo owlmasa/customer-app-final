@@ -65,7 +65,7 @@ export const MakerStats: React.FC<Props> = ({ customers, label }) => {
                 <div className="space-y-1">
                   {m.products.map(p => (
                     <div key={p.product} className="flex items-center gap-2 text-xs">
-                      <span className="w-20 text-gray-600 flex-shrink-0">{p.product}</span>
+                      <span className="w-24 text-gray-600 flex-shrink-0 truncate" title={p.product}>{p.product}</span>
                       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-orange-400 rounded-full" style={{ width: `${p.rate}%` }} />
                       </div>

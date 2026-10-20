@@ -9,6 +9,7 @@ interface Props {
   onDayChange: (day: DayOfWeek) => void;
   children: React.ReactNode;
   headerActions?: React.ReactNode;
+  headerLeft?: React.ReactNode;
   dayCounts: Record<DayOfWeek, number>;
 }
 
@@ -35,15 +36,16 @@ const DroppableTab = ({ day, currentDay, onClick, count }: { day: DayOfWeek, cur
   );
 };
 
-export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions, dayCounts }) => {
+export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions, headerLeft, dayCounts }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center py-3 md:h-16 md:py-0 gap-3">
-            <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start">
+            <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start min-w-0">
+              {headerLeft}
               <div className="bg-blue-600 p-2 rounded text-white flex-shrink-0"><MapPin size={20} className="md:w-6 md:h-6" /></div>
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">ルートセールス訪問一覧</h1>
+              <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 truncate min-w-0">ルートセールス訪問一覧</h1>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end overflow-x-auto no-scrollbar pb-1 md:pb-0">
               {headerActions}

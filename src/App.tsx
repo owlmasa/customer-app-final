@@ -20,6 +20,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CustomerCard } from './components/CustomerCard';
 import { MakerStats } from './components/MakerStats';
+import { HotSwitchRate } from './components/HotSwitchRate';
 
 function App() {
   const [currentDay, setCurrentDay] = useState<DayOfWeek>('月');
@@ -199,6 +200,7 @@ function App() {
         currentDay={currentDay} 
         onDayChange={setCurrentDay} 
         dayCounts={dayCounts}
+        headerLeft={<HotSwitchRate customers={customers} schedules={schedules} />}
         headerActions={
         <>
           {/* Search & Filter - Always Visible (or responsive) */}

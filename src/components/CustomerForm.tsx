@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Customer } from '../types';
+import { Customer, MAKERS, NEW_PRODUCTS, Maker, sanitizeProducts } from '../types';
 import { X } from 'lucide-react';
 
 interface Props {
@@ -20,7 +20,8 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
     remarks: '',
     isCorporate: false,
     isTrashCollection: false,
-    priceRevisionDate: '',
+    maker: undefined,
+    newProducts: [],
     locationType: undefined,
     visitFrequency: undefined
   });
@@ -35,7 +36,8 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
         remarks: initialData.remarks,
         isCorporate: initialData.isCorporate || false,
         isTrashCollection: initialData.isTrashCollection || initialData.visitFrequency === 'ゴミ',
-        priceRevisionDate: initialData.priceRevisionDate || '',
+        maker: initialData.maker,
+        newProducts: sanitizeProducts(initialData.maker, initialData.newProducts),
         locationType: initialData.locationType,
         visitFrequency: initialData.visitFrequency === 'ゴミ' ? undefined : initialData.visitFrequency
       });
@@ -47,7 +49,8 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
         remarks: '',
         isCorporate: false,
         isTrashCollection: false,
-        priceRevisionDate: '',
+        maker: undefined,
+        newProducts: [],
         locationType: undefined,
         visitFrequency: undefined
       });
@@ -69,9 +72,23 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleMakerChange = (maker: Maker | undefined) => {
+    // メーカーを変えたら、そのメーカーに無い商品のチェックは外す
+    setFormData({ ...formData, maker, newProducts: sanitizeProducts(maker, formData.newProducts) });
+  };
+
+  const toggleProduct = (product: string) => {
+    const current = formData.newProducts || [];
+    const next = current.includes(product) ? current.filter(p => p !== product) : [...current, product];
+    setFormData({ ...formData, newProducts: next });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) { onSubmit(formData); onClose(); }
+    if (validate()) {
+      onSubmit({ ...formData, newProducts: sanitizeProducts(formData.maker, formData.newProducts) });
+      onClose();
+    }
   };
 
   return (
@@ -117,29 +134,68 @@ export const CustomerForm: React.FC<Props> = ({ isOpen, onClose, onSubmit, initi
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">価格改定日</label>
-                <input 
-                  type="date" 
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={formData.priceRevisionDate} 
-                  onChange={(e) => setFormData({ ...formData, priceRevisionDate: e.target.value })} 
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">訪問頻度</label>
-                <select 
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.visitFrequency || ''}
-                  onChange={(e) => setFormData({ ...formData, visitFrequency: e.target.value as any })}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">訪問頻度</label>
+            <select 
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+              value={formData.visitFrequency || ''}
+              onChange={(e) => setFormData({ ...formData, visitFrequency: (e.target.value || undefined) as any })}
+            >
+              <option value="">選択してください</option>
+              {VISIT_FREQUENCIES.map(f => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">メーカー</label>
+            <div className="grid grid-cols-5 gap-2">
+              {MAKERS.map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleMakerChange(formData.maker === m ? undefined : m)}
+                  className={`py-2 rounded-md text-sm font-bold border transition-colors ${
+                    formData.maker === m
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300'
+                  }`}
                 >
-                  <option value="">選択してください</option>
-                  {VISIT_FREQUENCIES.map(f => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-             </div>
+                  {m}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleMakerChange(undefined)}
+                className={`py-2 rounded-md text-xs border transition-colors ${
+                  !formData.maker ? 'bg-gray-600 text-white border-gray-600' : 'bg-white text-gray-500 border-gray-300'
+                }`}
+              >
+                未選択
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">新商品</label>
+            {formData.maker ? (
+              <div className="flex flex-wrap gap-x-4 gap-y-2 p-3 bg-gray-50 rounded-md border border-gray-200">
+                {NEW_PRODUCTS[formData.maker].map(p => (
+                  <label key={p} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      checked={(formData.newProducts || []).includes(p)}
+                      onChange={() => toggleProduct(p)}
+                    />
+                    <span className="text-sm text-gray-700">{p}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 p-3 bg-gray-50 rounded-md border border-dashed border-gray-200">メーカーを選ぶと新商品を選択できます</p>
+            )}
           </div>
 
           <div>

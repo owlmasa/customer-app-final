@@ -6,7 +6,7 @@ import { CSVImport } from './components/CSVImport';
 import { CSVExport } from './components/CSVExport';
 import { useStore } from './store/useStore';
 import { DayOfWeek, Customer, DAYS_OF_WEEK } from './types';
-import { Plus, Trash2, CheckSquare, X, ArrowRightLeft, Copy, Search, Filter } from 'lucide-react';
+import { Plus, Trash2, CheckSquare, X, ArrowRightLeft, Copy, Search } from 'lucide-react';
 import { 
   DndContext, 
   pointerWithin,
@@ -19,6 +19,8 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CustomerCard } from './components/CustomerCard';
+import { MakerStats } from './components/MakerStats';
+import { HotSwitchRate } from './components/HotSwitchRate';
 
 function App() {
   const [currentDay, setCurrentDay] = useState<DayOfWeek>('月');
@@ -32,8 +34,6 @@ function App() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  // Filter mode: 'all' | 'revised' | 'notRevised'
-  const [filterMode, setFilterMode] = useState<'all' | 'revised' | 'notRevised'>('all');
 
   const { 
     customers, 
@@ -59,22 +59,10 @@ function App() {
       )
     : currentDaySchedule.map(id => customers[id]).filter(Boolean);
 
-  // Apply Filter (Price Revision)
-  const displayedCustomers = baseCustomers.filter(c => {
-    if (filterMode === 'revised') return !!c.priceRevisionDate;
-    if (filterMode === 'notRevised') return !c.priceRevisionDate;
-    return true;
-  });
+  const displayedCustomers = baseCustomers;
 
-  // Calculate Statistics
-  const stats = {
-    total: baseCustomers.length,
-    revised: baseCustomers.filter(c => c.priceRevisionDate).length,
-    notRevised: baseCustomers.filter(c => !c.priceRevisionDate).length,
-    rate: baseCustomers.length > 0 
-      ? Math.round((baseCustomers.filter(c => c.priceRevisionDate).length / baseCustomers.length) * 100) 
-      : 0
-  };
+  // 投入率は表示中の曜日の得意先で集計
+  const currentDayCustomers = currentDaySchedule.map(id => customers[id]).filter(Boolean);
 
   const existingNumbers = Object.values(customers).map(c => c.customerNumber);
 
@@ -86,7 +74,7 @@ function App() {
   const handleImport = (data: Omit<Customer, 'id'>[]) => importCustomers(data, currentDay);
   
   const handleDragStart = (event: any) => {
-    if (isSelectionMode || searchQuery || filterMode !== 'all') return; // Disable drag if filtered
+    if (isSelectionMode || searchQuery) return; // Disable drag if filtered
     setActiveId(event.active.id);
   };
 
@@ -95,7 +83,7 @@ function App() {
     setActiveId(null);
 
     if (!over) return;
-    if (isSelectionMode || searchQuery || filterMode !== 'all') return;
+    if (isSelectionMode || searchQuery) return;
 
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
@@ -212,6 +200,7 @@ function App() {
         currentDay={currentDay} 
         onDayChange={setCurrentDay} 
         dayCounts={dayCounts}
+        headerLeft={<HotSwitchRate customers={customers} schedules={schedules} />}
         headerActions={
         <>
           {/* Search & Filter - Always Visible (or responsive) */}
@@ -230,35 +219,6 @@ function App() {
                   <X size={12} />
                 </button>
               )}
-            </div>
-            <div className="h-4 w-px bg-gray-200 mx-1"></div>
-            
-            {/* Filter Buttons */}
-            <div className="flex gap-1">
-              <button
-                onClick={() => setFilterMode(m => m === 'revised' ? 'all' : 'revised')}
-                className={`p-1 rounded transition-all flex items-center gap-1 ${
-                  filterMode === 'revised'
-                    ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-300 ring-offset-1'
-                    : 'bg-white text-gray-400 border border-gray-200 hover:text-orange-500 hover:border-orange-200 hover:bg-orange-50'
-                }`}
-                title="価格改定ありのみ表示"
-              >
-                <Filter size={16} className={filterMode === 'revised' ? 'fill-white' : ''} />
-                <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定のみ</span>
-              </button>
-              <button
-                onClick={() => setFilterMode(m => m === 'notRevised' ? 'all' : 'notRevised')}
-                className={`p-1 rounded transition-all flex items-center gap-1 ${
-                  filterMode === 'notRevised'
-                    ? 'bg-gray-600 text-white shadow-md ring-2 ring-gray-400 ring-offset-1'
-                    : 'bg-white text-gray-400 border border-gray-200 hover:text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-                title="価格改定なしのみ表示"
-              >
-                <Filter size={16} className={filterMode === 'notRevised' ? 'fill-white' : 'opacity-50'} />
-                <span className="text-[10px] md:text-xs font-medium hidden sm:inline">改定なし</span>
-              </button>
             </div>
           </div>
 
@@ -326,6 +286,10 @@ function App() {
           )}
         </>
       }>
+        <MakerStats
+          customers={currentDayCustomers}
+          label={`${currentDay}${currentDay !== 'その他' ? '曜日' : ''}`}
+        />
         <SortableCustomerList 
           customers={displayedCustomers} 
           onEdit={handleEdit} 
@@ -334,8 +298,6 @@ function App() {
           isSelectionMode={isSelectionMode}
           selectedIds={selectedIds}
           onToggleSelection={handleToggleSelection}
-          stats={stats}
-          filterMode={filterMode}
           onToggleAll={handleToggleAll}
           allSelected={allSelected}
         />

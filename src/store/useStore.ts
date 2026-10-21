@@ -24,6 +24,7 @@ interface StoreState {
   removeFromSchedule: (day: DayOfWeek, customerId: string) => void;
 
   // サーバーから読み込んだ内容で丸ごと置き換え
+  pruneOrphans: () => number; // 掃除した件数を返す
   replaceAll: (customers: Record<string, Customer>, schedules: Partial<Record<DayOfWeek, string[]>>) => void;
 }
 
@@ -198,6 +199,14 @@ export const useStore = create<StoreState>()(
       },
       
       getCustomer: (id) => get().customers[id],
+      pruneOrphans: () => {
+        const { customers, schedules } = get();
+        const cleaned = prune(customers, schedules);
+        const removed = Object.keys(customers).length - Object.keys(cleaned).length;
+        if (removed > 0) set({ customers: cleaned });
+        return removed;
+      },
+
       replaceAll: (customers, schedules) => {
         const full = DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: (schedules[day] || []).filter(id => customers[id]) }), {} as Record<DayOfWeek, string[]>);
         set({ customers: prune(customers, full), schedules: full });
@@ -210,16 +219,6 @@ export const useStore = create<StoreState>()(
         });
       }
     }),
-    {
-      name: 'customer-manager-storage',
-      // 起動時にも、曜日に入っていない残りデータを掃除する
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        const cleaned = prune(state.customers, state.schedules);
-        if (Object.keys(cleaned).length !== Object.keys(state.customers).length) {
-          useStore.setState({ customers: cleaned });
-        }
-      },
-    }
+    { name: 'customer-manager-storage' }
   )
 );

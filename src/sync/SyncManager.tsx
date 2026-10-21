@@ -2,10 +2,13 @@ import React, { useEffect } from 'react';
 import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Settings } from 'lucide-react';
 import clsx from 'clsx';
 import { isConnected, pullFromServer, pushToServer, syncOnStart, useSync } from './useSync';
+import { useStore } from '../store/useStore';
 
 // 起動時・復帰時・オンライン復帰時の同期（画面には何も出さない）
 export const SyncManager: React.FC = () => {
   useEffect(() => {
+    // 削除済みの残りデータを掃除（接続中なら掃除後の内容がスプレッドシートにも保存される）
+    useStore.getState().pruneOrphans();
     syncOnStart();
 
     const retry = () => {

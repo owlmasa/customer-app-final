@@ -27,6 +27,16 @@ interface StoreState {
   replaceAll: (customers: Record<string, Customer>, schedules: Partial<Record<DayOfWeek, string[]>>) => void;
 }
 
+// どの曜日にも入っていない得意先（削除済みの残り）を取り除く
+const prune = (customers: Record<string, Customer>, schedules: Record<DayOfWeek, string[]>) => {
+  const used = new Set(DAYS_OF_WEEK.flatMap(day => schedules[day] || []));
+  const next: Record<string, Customer> = {};
+  Object.keys(customers).forEach(id => {
+    if (used.has(id)) next[id] = customers[id];
+  });
+  return next;
+};
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
@@ -98,9 +108,8 @@ export const useStore = create<StoreState>()(
       
       clearSchedule: (day) => {
         set((state) => {
-          return {
-            schedules: { ...state.schedules, [day]: [] }
-          };
+          const schedules = { ...state.schedules, [day]: [] };
+          return { schedules, customers: prune(state.customers, schedules) };
         });
       },
       
@@ -191,15 +200,26 @@ export const useStore = create<StoreState>()(
       getCustomer: (id) => get().customers[id],
       replaceAll: (customers, schedules) => {
         const full = DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: (schedules[day] || []).filter(id => customers[id]) }), {} as Record<DayOfWeek, string[]>);
-        set({ customers, schedules: full });
+        set({ customers: prune(customers, full), schedules: full });
       },
 
       removeFromSchedule: (day, customerId) => {
-        set((state) => ({
-          schedules: { ...state.schedules, [day]: state.schedules[day].filter(id => id !== customerId) }
-        }));
+        set((state) => {
+          const schedules = { ...state.schedules, [day]: state.schedules[day].filter(id => id !== customerId) };
+          return { schedules, customers: prune(state.customers, schedules) };
+        });
       }
     }),
-    { name: 'customer-manager-storage' }
+    {
+      name: 'customer-manager-storage',
+      // 起動時にも、曜日に入っていない残りデータを掃除する
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const cleaned = prune(state.customers, state.schedules);
+        if (Object.keys(cleaned).length !== Object.keys(state.customers).length) {
+          useStore.setState({ customers: cleaned });
+        }
+      },
+    }
   )
 );

@@ -40,5 +40,11 @@ export const parseMigrationText = (text: string): MigrationData => {
     acc[day] = Array.isArray(ids) ? ids.map(String).filter(id => data.customers[id]) : [];
     return acc;
   }, {} as Record<DayOfWeek, string[]>);
-  return { ...data, schedules };
+  // どの曜日にも入っていないデータ（削除済みの残り）は取り込まない
+  const used = new Set(DAYS_OF_WEEK.flatMap(day => schedules[day]));
+  const customers: Record<string, Customer> = {};
+  used.forEach(id => {
+    customers[id] = { ...data.customers[id], id };
+  });
+  return { ...data, customers, schedules };
 };

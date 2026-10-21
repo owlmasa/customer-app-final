@@ -21,6 +21,7 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CustomerCard } from './components/CustomerCard';
 import { MakerStats } from './components/MakerStats';
 import { HotSwitchRate } from './components/HotSwitchRate';
+import { MigrationExport } from './components/MigrationExport';
 
 function App() {
   const [currentDay, setCurrentDay] = useState<DayOfWeek>('月');
@@ -286,6 +287,10 @@ function App() {
           )}
         </>
       }>
+        <div className="flex items-center justify-between gap-2 bg-purple-50 border border-purple-200 rounded-md px-3 py-2 mb-4">
+          <span className="text-xs text-purple-800">クラウド版へデータを移す時に使います（この端末のデータは消えません）</span>
+          <MigrationExport />
+        </div>
         <MakerStats
           customers={currentDayCustomers}
           label={`${currentDay}${currentDay !== 'その他' ? '曜日' : ''}`}

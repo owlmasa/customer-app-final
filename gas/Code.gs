@@ -55,8 +55,15 @@ function setup() {
     key = Utilities.getUuid().replace(/-/g, '');
     props.setProperty('API_KEY', key);
   }
+  // 親機（全担当者を見る画面）用の管理キー
+  let adminKey = props.getProperty('ADMIN_KEY');
+  if (!adminKey) {
+    adminKey = Utilities.getUuid().replace(/-/g, '');
+    props.setProperty('ADMIN_KEY', adminKey);
+  }
   Logger.log('スプレッドシート: ' + ss.getUrl());
   Logger.log('APIキー: ' + key);
+  Logger.log('管理キー（親機用）: ' + adminKey);
 }
 
 // 保存先のスプレッドシート
@@ -95,7 +102,16 @@ function doPost(e) {
 
 function handle_(req) {
   try {
-    const key = PropertiesService.getScriptProperties().getProperty('API_KEY');
+    const props = PropertiesService.getScriptProperties();
+
+    // 親機：全担当者のデータ（管理キーが必要）
+    if (req.action === 'all') {
+      const adminKey = props.getProperty('ADMIN_KEY');
+      if (!adminKey || req.key !== adminKey) return json_({ ok: false, error: '管理キーが違います' });
+      return json_({ ok: true, staff: loadAll_() });
+    }
+
+    const key = props.getProperty('API_KEY');
     if (!key || req.key !== key) return json_({ ok: false, error: 'APIキーが違います' });
 
     switch (req.action) {
@@ -169,6 +185,14 @@ function load_(staff) {
 
   const meta = getMeta_(name);
   return { customers: customers, schedules: schedules, version: meta.version, updatedAt: meta.updatedAt };
+}
+
+// ===== 全担当者の読み込み（親機用） =====
+function loadAll_() {
+  return listStaff_().map(name => {
+    const d = load_(name);
+    return { name: name, customers: d.customers, schedules: d.schedules, version: d.version, updatedAt: d.updatedAt };
+  });
 }
 
 // ===== 保存（その担当者の分をまるごと置き換え） =====

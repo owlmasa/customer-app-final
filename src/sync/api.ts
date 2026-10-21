@@ -69,3 +69,16 @@ export const saveData = (
   baseVersion: number,
   force = false,
 ): Promise<SaveResult> => post<SaveResult>(url, { action: 'save', key, staff, data, baseVersion, force });
+
+export interface StaffData extends SyncData {
+  name: string;
+  version: number;
+  updatedAt: string;
+}
+
+// 親機用：全担当者のデータ（管理キーが必要）
+export const fetchAll = async (url: string, adminKey: string): Promise<StaffData[]> => {
+  const r = await post<{ ok: boolean; staff?: StaffData[]; error?: string }>(url, { action: 'all', key: adminKey });
+  if (!r.ok) throw new ApiError(r.error || '読み込みに失敗しました');
+  return r.staff || [];
+};

@@ -3,6 +3,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fetchStaff, loadData } from './api';
 import { pullFromServer, pushToServer, useSync } from './useSync';
+import { parseMigrationText } from '../migration';
 
 interface Props {
   isOpen: boolean;
@@ -27,6 +28,8 @@ export const ConnectionSettings: React.FC<Props> = ({ isOpen, onClose }) => {
   const [staff, setStaff] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [migrationText, setMigrationText] = useState('');
+  const [migrationMsg, setMigrationMsg] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -115,6 +118,36 @@ export const ConnectionSettings: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const connected = !!(sync.gasUrl && sync.apiKey && sync.staff);
 
+  const pasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setMigrationText(text);
+      setMigrationMsg('');
+    } catch {
+      setMigrationMsg('自動で貼り付けできませんでした。下の欄を長押しして「ペースト」してください');
+    }
+  };
+
+  const importMigration = () => {
+    setMigrationMsg('');
+    try {
+      const data = parseMigrationText(migrationText);
+      const count = Object.keys(data.customers).length;
+      const days = (Object.keys(data.schedules) as (keyof typeof data.schedules)[])
+        .map(d => `${d}${data.schedules[d].length}`)
+        .join('・');
+      const current = Object.keys(useStore.getState().customers).length;
+      const target = connected ? `「${sync.staff}」のスプレッドシート` : 'この端末';
+      if (!window.confirm(`${count}件（${days}）を取り込みます。${current > 0 ? `今の${current}件は置き換わります。` : ''}取り込み後、${target}に保存されます。よろしいですか？`)) return;
+      // 置き換え → 接続中なら自動でスプレッドシートに保存される
+      useStore.getState().replaceAll(data.customers, data.schedules);
+      setMigrationText('');
+      setMigrationMsg(`${count}件を取り込みました`);
+    } catch (e) {
+      setMigrationMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -201,6 +234,37 @@ export const ConnectionSettings: React.FC<Props> = ({ isOpen, onClose }) => {
           <p className="text-[11px] text-gray-400">
             接続すると、変更は自動でスプレッドシートに保存されます。電波が無い時はこの端末に一時保存し、つながった時に送信します。
           </p>
+
+          {connected && (
+            <div className="border-t pt-4 space-y-2">
+              <p className="text-sm font-bold text-gray-800">移行データを貼り付け</p>
+              <p className="text-[11px] text-gray-500">
+                今の版（端末保存版）の「移行用コピー」でコピーした内容を貼り付けると、曜日・並び順ごと取り込めます。
+              </p>
+              <button
+                type="button"
+                onClick={pasteFromClipboard}
+                className="w-full py-2 rounded-md text-sm font-medium bg-purple-50 text-purple-700 border border-purple-200"
+              >
+                コピーした内容を貼り付け
+              </button>
+              <textarea
+                className="w-full p-2 border border-gray-300 rounded-md text-[10px] font-mono h-20"
+                placeholder="ここに貼り付け"
+                value={migrationText}
+                onChange={(e) => setMigrationText(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={importMigration}
+                disabled={!migrationText.trim()}
+                className="w-full py-2 rounded-md text-sm font-medium bg-purple-600 text-white disabled:opacity-50"
+              >
+                取り込む
+              </button>
+              {migrationMsg && <p className="text-xs text-purple-800">{migrationMsg}</p>}
+            </div>
+          )}
         </div>
       </div>
     </div>

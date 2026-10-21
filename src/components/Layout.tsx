@@ -10,6 +10,7 @@ interface Props {
   children: React.ReactNode;
   headerActions?: React.ReactNode;
   headerLeft?: React.ReactNode;
+  tabRight?: React.ReactNode;
   dayCounts: Record<DayOfWeek, number>;
 }
 
@@ -36,7 +37,7 @@ const DroppableTab = ({ day, currentDay, onClick, count }: { day: DayOfWeek, cur
   );
 };
 
-export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions, headerLeft, dayCounts }) => {
+export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, headerActions, headerLeft, tabRight, dayCounts }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm z-10">
@@ -54,8 +55,8 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
         </div>
       </header>
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="-mb-px flex overflow-x-auto no-scrollbar" aria-label="Tabs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2">
+          <nav className="-mb-px flex overflow-x-auto no-scrollbar flex-1 min-w-0" aria-label="Tabs">
             {DAYS_OF_WEEK.map((day) => (
               <DroppableTab 
                 key={day} 
@@ -66,6 +67,7 @@ export const Layout: React.FC<Props> = ({ currentDay, onDayChange, children, hea
               />
             ))}
           </nav>
+          {tabRight}
         </div>
       </div>
       <main className="flex-1 bg-gray-50">

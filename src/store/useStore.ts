@@ -22,6 +22,9 @@ interface StoreState {
   
   getCustomer: (id: string) => Customer | undefined;
   removeFromSchedule: (day: DayOfWeek, customerId: string) => void;
+
+  // サーバーから読み込んだ内容で丸ごと置き換え
+  replaceAll: (customers: Record<string, Customer>, schedules: Partial<Record<DayOfWeek, string[]>>) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -186,6 +189,11 @@ export const useStore = create<StoreState>()(
       },
       
       getCustomer: (id) => get().customers[id],
+      replaceAll: (customers, schedules) => {
+        const full = DAYS_OF_WEEK.reduce((acc, day) => ({ ...acc, [day]: (schedules[day] || []).filter(id => customers[id]) }), {} as Record<DayOfWeek, string[]>);
+        set({ customers, schedules: full });
+      },
+
       removeFromSchedule: (day, customerId) => {
         set((state) => ({
           schedules: { ...state.schedules, [day]: state.schedules[day].filter(id => id !== customerId) }

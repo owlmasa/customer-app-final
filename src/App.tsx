@@ -21,6 +21,8 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CustomerCard } from './components/CustomerCard';
 import { MakerStats } from './components/MakerStats';
 import { HotSwitchRate } from './components/HotSwitchRate';
+import { SyncManager, SyncStatusButton, SyncBanner } from './sync/SyncManager';
+import { ConnectionSettings } from './sync/ConnectionSettings';
 
 function App() {
   const [currentDay, setCurrentDay] = useState<DayOfWeek>('月');
@@ -34,6 +36,10 @@ function App() {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
+  // 接続用リンク（?gas=...&key=...）で開いた時は接続設定を自動で開く
+  const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
+    try { return !!new URLSearchParams(window.location.search).get('gas'); } catch { return false; }
+  });
 
   const { 
     customers, 
@@ -200,6 +206,7 @@ function App() {
         currentDay={currentDay} 
         onDayChange={setCurrentDay} 
         dayCounts={dayCounts}
+        tabRight={<SyncStatusButton onClick={() => setIsSettingsOpen(true)} />}
         headerLeft={<HotSwitchRate customers={customers} schedules={schedules} />}
         headerActions={
         <>
@@ -286,6 +293,8 @@ function App() {
           )}
         </>
       }>
+        <SyncManager />
+        <SyncBanner onOpenSettings={() => setIsSettingsOpen(true)} />
         <MakerStats
           customers={currentDayCustomers}
           label={`${currentDay}${currentDay !== 'その他' ? '曜日' : ''}`}
@@ -301,6 +310,7 @@ function App() {
           onToggleAll={handleToggleAll}
           allSelected={allSelected}
         />
+        <ConnectionSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         <CustomerForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingCustomer} existingNumbers={existingNumbers} />
       </Layout>
       <DragOverlay>

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Settings, ChevronDown, ChevronUp, MonitorSmartphone, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Settings, ChevronDown, ChevronUp, MonitorSmartphone, AlertTriangle, ArrowLeft, Target, MessageCircle, Check } from 'lucide-react';
 import clsx from 'clsx';
-import { fetchAll, StaffData } from '../sync/api';
+import { fetchAll, LineStatus, notifyNow, setLineToken, setTarget, StaffData } from '../sync/api';
 import { computeWeekStats, mergeStats, WeekStats, WEEKDAYS } from '../stats';
 import { DAYS_OF_WEEK, Maker, MAKERS } from '../types';
 
@@ -59,6 +59,17 @@ const pick = (s: WeekStats, view: View) => {
   return { rate: m.rate, switched: m.switched, total: m.total };
 };
 
+// 日本時間の今月（yyyy-MM）
+const currentMonth = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+  return `${parts.find(p => p.type === 'year')!.value}-${parts.find(p => p.type === 'month')!.value}`;
+};
+
+const gapLabel = (rate: number, target: number) => {
+  const g = rate - target;
+  return `${g >= 0 ? '+' : ''}${g}pt`;
+};
+
 const barColor = (r: number) => (r >= 70 ? 'bg-green-500' : r >= 40 ? 'bg-orange-400' : 'bg-red-400');
 
 const MakerDetail: React.FC<{ stats: WeekStats }> = ({ stats }) => (
@@ -104,14 +115,25 @@ export const AdminDashboard: React.FC = () => {
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [view, setView] = useState<View>('all');
   const [open, setOpen] = useState<string | null>(null);
+  const [targets, setTargets] = useState<Record<string, number>>({});
+  const [line, setLine] = useState<LineStatus | undefined>();
+  const [editingTarget, setEditingTarget] = useState(false);
+  const [targetInput, setTargetInput] = useState('');
+  const [showLine, setShowLine] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [actionMsg, setActionMsg] = useState('');
+  const month = currentMonth();
+  const target = targets[month];
 
   const refresh = useCallback(async (c = config) => {
     if (!c.gasUrl || !c.adminKey) return;
     setLoading(true);
     setError('');
     try {
-      const list = await fetchAll(c.gasUrl, c.adminKey);
-      setData(list);
+      const r = await fetchAll(c.gasUrl, c.adminKey);
+      setData(r.staff);
+      setTargets(r.targets);
+      setLine(r.line);
       setFetchedAt(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -138,6 +160,41 @@ export const AdminDashboard: React.FC = () => {
     () => [...rows].sort((a, b) => pick(b.stats, view).rate - pick(a.stats, view).rate || a.name.localeCompare(b.name, 'ja')),
     [rows, view],
   );
+
+  const runAction = async (fn: () => Promise<string>) => {
+    setActionMsg('');
+    setError('');
+    try {
+      setActionMsg(await fn());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const saveTarget = () =>
+    runAction(async () => {
+      const t = Number(targetInput);
+      if (!(t >= 0 && t <= 100)) throw new Error('目標は0〜100の数字で入力してください');
+      const r = await setTarget(config.gasUrl, config.adminKey, month, t);
+      setTargets(r.targets);
+      setEditingTarget(false);
+      return `${month.replace('-', '年')}月の目標を${t}%にしました`;
+    });
+
+  const saveToken = () =>
+    runAction(async () => {
+      const r = await setLineToken(config.gasUrl, config.adminKey, tokenInput);
+      setLine(r.line);
+      setTokenInput('');
+      return 'LINEのチャネルアクセストークンを保存しました';
+    });
+
+  const sendNow = (type: 'morning' | 'evening') =>
+    runAction(async () => {
+      if (!window.confirm(`${type === 'morning' ? '担当者への朝の通知' : '管理者への夕方の通知'}を今すぐ送りますか？`)) return '';
+      const r = await notifyNow(config.gasUrl, config.adminKey, type);
+      return `${r.sent}件送信しました`;
+    });
 
   const applySettings = () => {
     const c = { gasUrl: form.gasUrl.trim(), adminKey: form.adminKey.trim() };
@@ -218,6 +275,10 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {actionMsg && (
+          <div className="bg-green-50 border border-green-300 text-green-800 rounded-md p-3 text-sm">{actionMsg}</div>
+        )}
+
         {overall && (
           <>
             {/* 全体サマリー */}
@@ -232,6 +293,48 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 {overall.unassigned > 0 && (
                   <p className="text-[11px] text-red-600 text-right">メーカー未選択<br /><span className="text-base font-bold">{overall.unassigned}台</span></p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mb-3 p-2 rounded-md bg-orange-50 border border-orange-200">
+                <Target size={16} className="text-orange-600 flex-shrink-0" />
+                {editingTarget ? (
+                  <>
+                    <span className="text-xs text-orange-800 whitespace-nowrap">今月の目標</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={100}
+                      className="w-16 p-1 border border-orange-300 rounded text-sm text-right"
+                      value={targetInput}
+                      onChange={(e) => setTargetInput(e.target.value)}
+                    />
+                    <span className="text-xs text-orange-800">%</span>
+                    <button onClick={saveTarget} className="ml-auto px-3 py-1 rounded bg-orange-600 text-white text-xs font-bold">保存</button>
+                    <button onClick={() => setEditingTarget(false)} className="px-2 py-1 rounded bg-white text-gray-600 text-xs border border-gray-200">戻る</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs text-orange-800">
+                      今月の目標：
+                      {typeof target === 'number' ? (
+                        <>
+                          <span className="font-bold text-sm">{target}%</span>
+                          <span className={clsx('ml-2 font-bold', overall.rate >= target ? 'text-green-700' : 'text-red-600')}>
+                            {gapLabel(overall.rate, target)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-bold">未設定</span>
+                      )}
+                    </span>
+                    <button
+                      onClick={() => { setTargetInput(typeof target === 'number' ? String(target) : ''); setEditingTarget(true); }}
+                      className="ml-auto px-3 py-1 rounded bg-white text-orange-700 text-xs font-bold border border-orange-300"
+                    >
+                      {typeof target === 'number' ? '変更' : '設定'}
+                    </button>
+                  </>
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
@@ -285,6 +388,11 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="flex items-center justify-between mt-1 text-[11px] text-gray-500">
                             <span>
+                              {view === 'all' && typeof target === 'number' && (
+                                <span className={clsx('font-bold mr-2', v.rate >= target ? 'text-green-700' : 'text-red-600')}>
+                                  目標{gapLabel(v.rate, target)}
+                                </span>
+                              )}
                               最終更新 {formatUpdated(r.updatedAt)}
                               {r.stats.unassigned > 0 && <span className="text-red-600 ml-2">未選択{r.stats.unassigned}台</span>}
                             </span>
@@ -312,6 +420,61 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-center text-sm text-gray-500 py-8 bg-white rounded-lg border border-dashed border-gray-300">
                   担当者のデータがまだありません
                 </p>
+              )}
+            </section>
+
+            {/* LINE通知 */}
+            <section className="bg-white border border-gray-200 rounded-lg shadow-sm">
+              <button onClick={() => setShowLine(!showLine)} className="w-full flex items-center gap-2 p-3 bg-transparent text-left">
+                <MessageCircle size={18} className="text-green-600" />
+                <span className="flex-1 text-sm font-bold text-gray-800">LINE通知</span>
+                <span className={clsx('text-[11px] font-bold', line?.tokenSet ? 'text-green-700' : 'text-gray-400')}>
+                  {line?.tokenSet ? '設定済み' : '未設定'}
+                </span>
+                {showLine ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              {showLine && (
+                <div className="px-3 pb-3 space-y-3 border-t border-gray-100 pt-3 text-xs text-gray-700">
+                  <p>平日のみ、担当者には朝7時に「今日の目標」、管理者には夕方18時に「全体レポート」を送ります（土日・祝日はお休み）。</p>
+                  <div>
+                    <label className="block font-medium text-gray-600 mb-1">チャネルアクセストークン（長期）</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        className="flex-1 min-w-0 p-2 border border-gray-300 rounded-md font-mono text-[11px]"
+                        placeholder={line?.tokenSet ? '設定済み（変更する時だけ入力）' : 'LINE Developersで発行したトークン'}
+                        value={tokenInput}
+                        onChange={(e) => setTokenInput(e.target.value)}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                      />
+                      <button onClick={saveToken} disabled={!tokenInput.trim()} className="px-3 rounded-md bg-green-600 text-white font-bold disabled:opacity-50">
+                        保存
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-600 mb-1">登録状況（管理者 {line?.managers ?? 0}名）</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(line?.staff || {}).map(([name, ok]) => (
+                        <span key={name} className={clsx('px-2 py-0.5 rounded border flex items-center gap-1', ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400')}>
+                          {ok && <Check size={12} />}{name}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1.5">
+                      公式アカウントを友だち追加して、担当者は「登録 名前」、管理者は「管理者登録 管理キー」と送ると登録されます。
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => sendNow('morning')} disabled={!line?.tokenSet} className="flex-1 py-2 rounded-md border border-gray-300 bg-white font-medium disabled:opacity-50">
+                      朝の通知を今すぐ送る
+                    </button>
+                    <button onClick={() => sendNow('evening')} disabled={!line?.tokenSet} className="flex-1 py-2 rounded-md border border-gray-300 bg-white font-medium disabled:opacity-50">
+                      夕方の通知を今すぐ送る
+                    </button>
+                  </div>
+                </div>
               )}
             </section>
 

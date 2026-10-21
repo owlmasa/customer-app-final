@@ -76,9 +76,36 @@ export interface StaffData extends SyncData {
   updatedAt: string;
 }
 
+export interface LineStatus {
+  tokenSet: boolean;
+  staff: Record<string, boolean>; // 担当者名 → LINE登録済みか
+  managers: number;
+}
+
+export interface AllResult {
+  staff: StaffData[];
+  targets: Record<string, number>; // 'yyyy-MM' → 目標切替率(%)
+  line?: LineStatus;
+}
+
 // 親機用：全担当者のデータ（管理キーが必要）
-export const fetchAll = async (url: string, adminKey: string): Promise<StaffData[]> => {
-  const r = await post<{ ok: boolean; staff?: StaffData[]; error?: string }>(url, { action: 'all', key: adminKey });
+export const fetchAll = async (url: string, adminKey: string): Promise<AllResult> => {
+  const r = await post<{ ok: boolean; error?: string } & Partial<AllResult>>(url, { action: 'all', key: adminKey });
   if (!r.ok) throw new ApiError(r.error || '読み込みに失敗しました');
-  return r.staff || [];
+  return { staff: r.staff || [], targets: r.targets || {}, line: r.line };
 };
+
+const adminCall = async <T>(url: string, adminKey: string, body: Record<string, unknown>): Promise<T> => {
+  const r = await post<{ ok: boolean; error?: string } & T>(url, { ...body, key: adminKey });
+  if (!r.ok) throw new ApiError(r.error || '失敗しました');
+  return r;
+};
+
+export const setTarget = (url: string, adminKey: string, month: string, target: number) =>
+  adminCall<{ targets: Record<string, number> }>(url, adminKey, { action: 'setTarget', month, target });
+
+export const setLineToken = (url: string, adminKey: string, token: string) =>
+  adminCall<{ line: LineStatus }>(url, adminKey, { action: 'setLineToken', token });
+
+export const notifyNow = (url: string, adminKey: string, type: 'morning' | 'evening') =>
+  adminCall<{ sent: number }>(url, adminKey, { action: 'notifyNow', type });

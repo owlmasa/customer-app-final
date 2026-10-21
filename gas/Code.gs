@@ -2,9 +2,11 @@
  * ルートセールス訪問一覧 v2 — スプレッドシート保存用API（Google Apps Script）
  *
  * 使い方
- *  1. 新しいスプレッドシートを作り「拡張機能 → Apps Script」を開く
+ *  1. script.google.com で「新しいプロジェクト」を作る
+ *     （スプレッドシートの「拡張機能 → Apps Script」から開いてもOK）
  *  2. このファイルの中身を全部貼り付けて保存
- *  3. 関数「setup」を1回実行（シートが自動で作られ、APIキーがログに出る）
+ *  3. 関数「setup」を1回実行
+ *     → 保存用スプレッドシートが自動で作られ、そのURLとAPIキーがログに出る
  *  4. 「デプロイ → 新しいデプロイ → ウェブアプリ」
  *       実行するユーザー：自分　／　アクセスできるユーザー：全員
  *  5. 発行されたウェブアプリURLと、ログに出たAPIキーをアプリ側に設定する
@@ -25,7 +27,14 @@ const META_HEADERS = ['担当者', 'バージョン', '更新日時', '件数'];
 
 // ===== 初期設定（最初に1回だけ実行） =====
 function setup() {
-  const ss = SpreadsheetApp.getActive();
+  const props = PropertiesService.getScriptProperties();
+  let ss = SpreadsheetApp.getActive();
+  if (!ss) {
+    // スプレッドシートに紐づいていない場合は、保存用のシートを自動作成
+    const id = props.getProperty('SHEET_ID');
+    ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.create('ルートセールス訪問一覧 データ');
+    props.setProperty('SHEET_ID', ss.getId());
+  }
   ensureSheet_(ss, SHEET_STAFF, ['担当者名']);
   ensureSheet_(ss, SHEET_CUSTOMERS, CUSTOMER_HEADERS);
   ensureSheet_(ss, SHEET_SCHEDULES, SCHEDULE_HEADERS);
@@ -35,13 +44,28 @@ function setup() {
   ss.getSheetByName(SHEET_CUSTOMERS).getRange('A:C').setNumberFormat('@');
   ss.getSheetByName(SHEET_SCHEDULES).getRange('D:E').setNumberFormat('@');
 
-  const props = PropertiesService.getScriptProperties();
+  // 自動で作られる空の「シート1」は削除
+  ['シート1', 'Sheet1'].forEach(n => {
+    const sh = ss.getSheetByName(n);
+    if (sh && sh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(sh);
+  });
+
   let key = props.getProperty('API_KEY');
   if (!key) {
     key = Utilities.getUuid().replace(/-/g, '');
     props.setProperty('API_KEY', key);
   }
+  Logger.log('スプレッドシート: ' + ss.getUrl());
   Logger.log('APIキー: ' + key);
+}
+
+// 保存先のスプレッドシート
+function ss_() {
+  const active = SpreadsheetApp.getActive();
+  if (active) return active;
+  const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  if (!id) throw new Error('先に setup を実行してください');
+  return SpreadsheetApp.openById(id);
 }
 
 function ensureSheet_(ss, name, headers) {
@@ -95,7 +119,7 @@ function json_(obj) {
 
 // ===== 担当者 =====
 function listStaff_() {
-  const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_STAFF);
+  const sh = ss_().getSheetByName(SHEET_STAFF);
   if (!sh || sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues()
     .map(r => String(r[0]).trim())
@@ -112,7 +136,7 @@ function requireStaff_(staff) {
 // ===== 読み込み =====
 function load_(staff) {
   const name = requireStaff_(staff);
-  const ss = SpreadsheetApp.getActive();
+  const ss = ss_();
 
   const customers = {};
   rowsOf_(ss.getSheetByName(SHEET_CUSTOMERS)).forEach(r => {
@@ -163,7 +187,7 @@ function save_(staff, data, baseVersion, force) {
       return { ok: false, conflict: true, version: meta.version, error: '別の端末で更新されています' };
     }
 
-    const ss = SpreadsheetApp.getActive();
+    const ss = ss_();
     const now = new Date();
 
     const customerRows = Object.keys(data.customers).map(id => {
@@ -213,7 +237,7 @@ function replaceRowsOf_(sh, width, staffCol, name, newRows) {
 }
 
 function getMeta_(name) {
-  const rows = rowsOf_(SpreadsheetApp.getActive().getSheetByName(SHEET_META));
+  const rows = rowsOf_(ss_().getSheetByName(SHEET_META));
   for (let i = 0; i < rows.length; i++) {
     if (rows[i][0] === name) {
       const d = rows[i][2];
@@ -224,7 +248,7 @@ function getMeta_(name) {
 }
 
 function setMeta_(name, version, date, count) {
-  const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_META);
+  const sh = ss_().getSheetByName(SHEET_META);
   const meta = getMeta_(name);
   const values = [[name, version, date, count]];
   if (meta.row) sh.getRange(meta.row, 1, 1, 4).setValues(values);

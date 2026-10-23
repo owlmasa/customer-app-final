@@ -130,3 +130,21 @@ export const liffRegister = async (url: string, idToken: string, name: string): 
   if (!r.ok) throw new ApiError(r.error || '登録に失敗しました');
   return r;
 };
+
+// フォロー依頼
+export const fetchFollowTarget = async (url: string, key: string): Promise<{ target: string; registered: boolean }> => {
+  const r = await post<{ ok: boolean; error?: string; target?: string; registered?: boolean }>(url, { action: 'followTarget', key });
+  if (!r.ok) throw new ApiError(r.error || '送り先を確認できませんでした');
+  return { target: r.target || '', registered: !!r.registered };
+};
+
+export const sendFollowRequest = async (
+  url: string,
+  key: string,
+  staff: string,
+  items: { id: string; note: string }[],
+): Promise<{ sent: number; target: string }> => {
+  const r = await post<{ ok: boolean; error?: string; sent?: number; target?: string }>(url, { action: 'followRequest', key, staff, items });
+  if (!r.ok) throw new ApiError(r.error || 'フォロー依頼を送れませんでした');
+  return { sent: r.sent || 0, target: r.target || '' };
+};

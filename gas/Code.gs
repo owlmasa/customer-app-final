@@ -20,6 +20,9 @@ const SHEET_META = '更新履歴';
 const SHEET_TARGETS = '目標';
 const SHEET_MANAGERS = '管理者';
 const SHEET_DAILY = '日次記録';
+const SHEET_SETTINGS = '設定';
+const SHEET_FOLLOW = 'フォロー依頼';
+const DEFAULT_FOLLOW_TARGET = '荒川凌'; // フォロー依頼の送り先（「設定」シートで変更できます）
 const TZ = 'Asia/Tokyo';
 const LINE_LOGIN_CHANNEL_ID = '2012167490'; // LIFFを作ったLINEログインチャネルのチャネルID
 const MORNING_HOUR = 7;  // 担当者への通知
@@ -163,6 +166,10 @@ function handle_(req) {
         return json_(Object.assign({ ok: true }, load_(req.staff)));
       case 'save':
         return json_(save_(req.staff, req.data, req.baseVersion, req.force));
+      case 'followTarget':
+        return json_(followTargetInfo_());
+      case 'followRequest':
+        return json_(followRequest_(req.staff, req.items));
       default:
         return json_({ ok: false, error: '不明な操作です: ' + req.action });
     }
@@ -745,4 +752,136 @@ function liffRegister_(idToken, name) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// =====================================================================
+// フォロー依頼
+// =====================================================================
+function settingsSheet_() {
+  const ss = ss_();
+  let sh = ss.getSheetByName(SHEET_SETTINGS);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_SETTINGS);
+    sh.getRange(1, 1, 2, 2).setValues([['項目', '値'], ['フォロー依頼の送り先', DEFAULT_FOLLOW_TARGET]]);
+    sh.getRange(1, 1, 1, 2).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function getSetting_(name, fallback) {
+  const row = rowsOf_(settingsSheet_()).find(r => String(r[0]).trim() === name);
+  const v = row ? String(row[1] || '').trim() : '';
+  return v || fallback;
+}
+
+function followTargetInfo_() {
+  const name = getSetting_('フォロー依頼の送り先', DEFAULT_FOLLOW_TARGET);
+  const row = rowsOf_(ss_().getSheetByName(SHEET_STAFF)).find(r => String(r[0]).trim() === name);
+  return { ok: true, target: name, registered: !!(row && String(row[1] || '').trim()) };
+}
+
+function followSheet_() {
+  const ss = ss_();
+  let sh = ss.getSheetByName(SHEET_FOLLOW);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_FOLLOW);
+    const headers = ['依頼日時', '依頼者', '送り先', '得意先番号', '顧客名', '住所', 'メーカー', 'フォロー備考', '送信結果'];
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.getRange('D:D').setNumberFormat('@');
+  }
+  return sh;
+}
+
+function followRequest_(staff, items) {
+  const name = requireStaff_(staff);
+  if (!Array.isArray(items) || items.length === 0) throw new Error('フォロー先が選ばれていません');
+  if (items.length > 100) throw new Error('一度に依頼できるのは100件までです');
+
+  const info = followTargetInfo_();
+  const targetRow = rowsOf_(ss_().getSheetByName(SHEET_STAFF)).find(r => String(r[0]).trim() === info.target);
+  const targetId = targetRow ? String(targetRow[1] || '').trim() : '';
+  if (!targetId) throw new Error(info.target + 'さんがLINE登録されていないため送れません');
+  if (!lineToken_()) throw new Error('LINEのトークンが設定されていません（親機のLINE通知で設定してください）');
+
+  // 得意先の情報はスプレッドシートの最新のものを使う
+  const d = load_(name);
+  const daysOf = id => ['月', '火', '水', '木', '金', 'その他'].filter(day => (d.schedules[day] || []).indexOf(id) !== -1);
+  const byNumber = {};
+  Object.keys(d.customers).forEach(id => {
+    const c = d.customers[id];
+    const key = String(c.customerNumber || '').trim() || id;
+    (byNumber[key] = byNumber[key] || []).push(id);
+  });
+
+  const now = new Date();
+  const blocks = [];
+  const logs = [];
+  const circled = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+  items.forEach((it, i) => {
+    const c = d.customers[String(it.id)];
+    if (!c) return;
+    const key = String(c.customerNumber || '').trim() || c.id;
+    // 複製されている得意先は、すべての訪問曜日をまとめて表示
+    const days = [];
+    (byNumber[key] || [c.id]).forEach(id => daysOf(id).forEach(x => { if (days.indexOf(x) === -1) days.push(x); }));
+    const note = String(it.note || '').trim();
+    const no = i < circled.length ? circled[i] : '(' + (i + 1) + ')';
+    const lines = [no + ' ' + c.name + '（No.' + c.customerNumber + '）'];
+    if (days.length) lines.push('曜日：' + days.join('・'));
+    if (c.address) {
+      lines.push('住所：' + c.address);
+      lines.push('地図：https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.address));
+    }
+    lines.push('メーカー：' + (c.maker || '未選択') + (c.maker ? '／新商品：' + ((c.newProducts || []).join('・') || 'なし') : ''));
+    const attrs = [];
+    if (c.visitFrequency) attrs.push('訪問頻度 ' + c.visitFrequency);
+    if (c.locationType) attrs.push(c.locationType);
+    if (c.isCorporate) attrs.push('法人');
+    if (c.isTrashCollection) attrs.push('ゴミ回収あり');
+    if (attrs.length) lines.push(attrs.join('／'));
+    if (c.remarks) lines.push('備考：' + c.remarks);
+    lines.push('▶フォロー備考：' + (note || 'なし'));
+    blocks.push(lines.join('\n'));
+    logs.push([now, name, info.target, String(c.customerNumber || ''), c.name, c.address || '', c.maker || '', note]);
+  });
+  if (blocks.length === 0) throw new Error('選んだ得意先が見つかりません。画面を開き直してください');
+
+  const header = '【フォロー依頼】' + name + 'さんから（' + blocks.length + '件）\n' +
+    Utilities.formatDate(now, TZ, 'M/d HH:mm') + '\n━━━━━━━━━━';
+  // LINEの1通は5,000文字まで。長いときは分けて送る
+  const texts = [];
+  let cur = header;
+  blocks.forEach(b => {
+    if ((cur + '\n\n' + b).length > 4500) {
+      texts.push(cur);
+      cur = b;
+    } else {
+      cur += '\n\n' + b;
+    }
+  });
+  texts.push(cur);
+
+  let ok = true;
+  for (let i = 0; i < texts.length; i += 5) {
+    const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + lineToken_() },
+      payload: JSON.stringify({ to: targetId, messages: texts.slice(i, i + 5).map(t => ({ type: 'text', text: t })) }),
+      muteHttpExceptions: true,
+    });
+    if (res.getResponseCode() !== 200) {
+      ok = false;
+      console.error('フォロー依頼の送信エラー: ' + res.getContentText());
+    }
+  }
+
+  const sh = followSheet_();
+  const rows = logs.map(r => r.concat([ok ? '送信済み' : '送信失敗']));
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+
+  if (!ok) throw new Error('LINEへの送信に失敗しました。時間をおいて再度お試しください');
+  return { ok: true, sent: blocks.length, target: info.target };
 }

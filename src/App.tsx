@@ -23,6 +23,8 @@ import { MakerStats } from './components/MakerStats';
 import { HotSwitchRate } from './components/HotSwitchRate';
 import { SyncManager, SyncStatusButton, SyncBanner } from './sync/SyncManager';
 import { ConnectionSettings } from './sync/ConnectionSettings';
+import { hasAdminAccess } from './liff/LiffGate';
+import { MonitorSmartphone } from 'lucide-react';
 
 function App() {
   const [currentDay, setCurrentDay] = useState<DayOfWeek>('月');
@@ -206,7 +208,17 @@ function App() {
         currentDay={currentDay} 
         onDayChange={setCurrentDay} 
         dayCounts={dayCounts}
-        tabRight={<SyncStatusButton onClick={() => setIsSettingsOpen(true)} />}
+        tabRight={
+          <>
+            {hasAdminAccess() && (
+              <a href="/admin" className="flex items-center gap-1 px-2 py-2 rounded-md bg-slate-900 text-white text-xs font-medium whitespace-nowrap flex-shrink-0" title="親機">
+                <MonitorSmartphone size={14} />
+                <span>親機</span>
+              </a>
+            )}
+            <SyncStatusButton onClick={() => setIsSettingsOpen(true)} />
+          </>
+        }
         headerLeft={<HotSwitchRate customers={customers} schedules={schedules} />}
         headerActions={
         <>

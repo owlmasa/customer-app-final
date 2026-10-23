@@ -109,3 +109,24 @@ export const setLineToken = (url: string, adminKey: string, token: string) =>
 
 export const notifyNow = (url: string, adminKey: string, type: 'morning' | 'evening') =>
   adminCall<{ sent: number }>(url, adminKey, { action: 'notifyNow', type });
+
+// LIFF（LINEログイン）：キー不要。IDトークンで本人確認
+export interface LiffResult {
+  staff?: string;
+  key?: string;
+  isManager?: boolean;
+  adminKey?: string;
+  unregistered?: string[];
+}
+
+export const liffLogin = async (url: string, idToken: string): Promise<LiffResult> => {
+  const r = await post<{ ok: boolean; error?: string } & LiffResult>(url, { action: 'liffLogin', idToken });
+  if (!r.ok) throw new ApiError(r.error || 'LINEでのログインに失敗しました');
+  return r;
+};
+
+export const liffRegister = async (url: string, idToken: string, name: string): Promise<LiffResult> => {
+  const r = await post<{ ok: boolean; error?: string } & LiffResult>(url, { action: 'liffRegister', idToken, name });
+  if (!r.ok) throw new ApiError(r.error || '登録に失敗しました');
+  return r;
+};

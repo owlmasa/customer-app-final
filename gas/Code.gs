@@ -21,6 +21,7 @@ const SHEET_TARGETS = '目標';
 const SHEET_MANAGERS = '管理者';
 const SHEET_DAILY = '日次記録';
 const TZ = 'Asia/Tokyo';
+const LINE_LOGIN_CHANNEL_ID = ''; // LIFFを作ったLINEログインチャネルのチャネルID
 const MORNING_HOUR = 7;  // 担当者への通知
 const EVENING_HOUR = 18; // 管理者への通知
 
@@ -130,6 +131,10 @@ function handle_(req) {
     const props = PropertiesService.getScriptProperties();
 
     // 親機：全担当者のデータ（管理キーが必要）
+    // LIFF（LINEログイン）：キー不要。LINEのIDトークンで本人確認する
+    if (req.action === 'liffLogin') return json_(liffLogin_(req.idToken));
+    if (req.action === 'liffRegister') return json_(liffRegister_(req.idToken, req.name));
+
     const ADMIN_ACTIONS = ['all', 'setTarget', 'setLineToken', 'notifyNow'];
     if (ADMIN_ACTIONS.indexOf(req.action) !== -1) {
       const adminKey = props.getProperty('ADMIN_KEY');
@@ -677,4 +682,67 @@ function eveningJob_(manual) {
   });
   if (!manual) recordDaily_(j.ymd, '夕', rows);
   return { sent: sent, type: 'evening' };
+}
+
+// =====================================================================
+// LIFF（LINEログイン）
+// =====================================================================
+function verifyIdToken_(idToken) {
+  if (!LINE_LOGIN_CHANNEL_ID) throw new Error('LINE_LOGIN_CHANNEL_ID が設定されていません');
+  if (!idToken) throw new Error('LINEの認証情報がありません');
+  const res = UrlFetchApp.fetch('https://api.line.me/oauth2/v2.1/verify', {
+    method: 'post',
+    payload: { id_token: String(idToken), client_id: String(LINE_LOGIN_CHANNEL_ID) },
+    muteHttpExceptions: true,
+  });
+  const body = JSON.parse(res.getContentText() || '{}');
+  if (res.getResponseCode() !== 200 || !body.sub) throw new Error('LINEの認証に失敗しました。アプリを開き直してください');
+  return body.sub;
+}
+
+function liffResult_(userId) {
+  const props = PropertiesService.getScriptProperties();
+  const staffRows = rowsOf_(ss_().getSheetByName(SHEET_STAFF));
+  const mine = staffRows.find(r => String(r[1] || '').trim() === userId);
+  const isManager = rowsOf_(ss_().getSheetByName(SHEET_MANAGERS)).some(r => String(r[0]).trim() === userId);
+  const out = { ok: true, isManager: isManager };
+  if (mine) {
+    out.staff = String(mine[0]).trim();
+    out.key = props.getProperty('API_KEY');
+  } else {
+    // まだ登録していない人には、未登録の担当者名を返す（アプリ上で選んで登録）
+    out.unregistered = staffRows
+      .filter(r => String(r[0]).trim() && !String(r[1] || '').trim())
+      .map(r => String(r[0]).trim());
+  }
+  if (isManager) out.adminKey = props.getProperty('ADMIN_KEY');
+  return out;
+}
+
+function liffLogin_(idToken) {
+  return liffResult_(verifyIdToken_(idToken));
+}
+
+function liffRegister_(idToken, name) {
+  const userId = verifyIdToken_(idToken);
+  const target = String(name || '').replace(/\s+/g, '');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) throw new Error('混み合っています。少し待ってから再度お試しください');
+  try {
+    const sh = ss_().getSheetByName(SHEET_STAFF);
+    const rows = rowsOf_(sh);
+    if (rows.some(r => String(r[1] || '').trim() === userId)) return liffResult_(userId);
+    for (let i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]).replace(/\s+/g, '') !== target) continue;
+      const current = String(rows[i][1] || '').trim();
+      if (current && current !== userId) {
+        return { ok: false, error: '「' + String(rows[i][0]).trim() + '」は別のLINEアカウントで登録済みです。管理者に確認してください' };
+      }
+      sh.getRange(i + 2, 2).setValue(userId);
+      return liffResult_(userId);
+    }
+    return { ok: false, error: '担当者シートに「' + name + '」がありません' };
+  } finally {
+    lock.releaseLock();
+  }
 }

@@ -21,7 +21,7 @@ const SHEET_TARGETS = '目標';
 const SHEET_MANAGERS = '管理者';
 const SHEET_DAILY = '日次記録';
 const TZ = 'Asia/Tokyo';
-const LINE_LOGIN_CHANNEL_ID = ''; // LIFFを作ったLINEログインチャネルのチャネルID
+const LINE_LOGIN_CHANNEL_ID = '2012167490'; // LIFFを作ったLINEログインチャネルのチャネルID
 const MORNING_HOUR = 7;  // 担当者への通知
 const EVENING_HOUR = 18; // 管理者への通知
 

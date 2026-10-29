@@ -29,7 +29,7 @@ export const MAKERS: Maker[] = ['SF', 'AS', 'KR', 'PK'];
 export const NEW_PRODUCTS: Record<Maker, string[]> = {
   SF: ['コンポタ', 'ココア', 'ゴディバ', 'CBミルクティー', '500P焙じ茶'],
   AS: ['コンポタ', 'ココア', 'おしるこ', 'ホットレモン'],
-  KR: ['コンポタ', 'ココア', 'ホットレモン'],
+  KR: ['コンポタ', 'ココア', 'ホットレモン', 'ほうじ茶'],
   PK: ['コンポタ'],
 };
 

@@ -290,7 +290,7 @@ function App() {
                 <CheckSquare size={16} className="md:w-[18px] md:h-[18px]" />
                 <span className="hidden sm:inline">複数選択</span>
               </button>
-              <CSVExport customers={Object.values(customers)} />
+              <CSVExport customers={customers} schedules={schedules} currentDay={currentDay} />
               <CSVImport onImport={handleImport} />
               <button onClick={handleClearSchedule} className="flex items-center justify-center gap-1 md:gap-2 px-3 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors shadow-sm text-xs md:text-sm font-medium whitespace-nowrap border-0 cursor-pointer appearance-none" title="一括削除">
                 <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />

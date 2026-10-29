@@ -148,3 +148,10 @@ export const sendFollowRequest = async (
   if (!r.ok) throw new ApiError(r.error || 'フォロー依頼を送れませんでした');
   return { sent: r.sent || 0, target: r.target || '' };
 };
+
+// CSVを一時保存して、外部ブラウザで開くためのトークンを受け取る（LINEの中での出力用）
+export const stashCsv = async (url: string, key: string, text: string, filename: string): Promise<string> => {
+  const r = await post<{ ok: boolean; error?: string; token?: string }>(url, { action: 'csvStash', key, text, filename });
+  if (!r.ok || !r.token) throw new ApiError(r.error || 'CSVを準備できませんでした');
+  return r.token;
+};

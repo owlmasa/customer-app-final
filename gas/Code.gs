@@ -107,7 +107,9 @@ function ensureSheet_(ss, name, headers) {
 
 // ===== 入口 =====
 function doGet(e) {
-  return handle_(e.parameter || {});
+  const p = (e && e.parameter) || {};
+  if (p.csv) return csvDownload_(p.csv);
+  return handle_(p);
 }
 
 function doPost(e) {
@@ -170,6 +172,8 @@ function handle_(req) {
         return json_(followTargetInfo_());
       case 'followRequest':
         return json_(followRequest_(req.staff, req.items));
+      case 'csvStash':
+        return json_(csvStash_(req.text, req.filename));
       default:
         return json_({ ok: false, error: '不明な操作です: ' + req.action });
     }
@@ -884,4 +888,37 @@ function followRequest_(staff, items) {
 
   if (!ok) throw new Error('LINEへの送信に失敗しました。時間をおいて再度お試しください');
   return { ok: true, sent: blocks.length, target: info.target };
+}
+
+
+// ===== CSV出力（LINEの中ではダウンロードできないため、一時的なURLを作って外部ブラウザで開く） =====
+const CSV_CHUNK = 25000; // CacheServiceは1件100KBまで（日本語は1文字3バイト）
+const CSV_TTL = 600;     // 10分で消える
+
+function csvStash_(text, filename) {
+  text = String(text || '');
+  if (!text) throw new Error('出力するデータがありません');
+  const token = Utilities.getUuid().replace(/-/g, '');
+  const chunks = {};
+  let n = 0;
+  for (let i = 0; i < text.length; i += CSV_CHUNK) chunks['csv_' + token + '_' + (n++)] = text.slice(i, i + CSV_CHUNK);
+  chunks['csv_' + token] = JSON.stringify({ n: n, filename: String(filename || 'export.csv') });
+  CacheService.getScriptCache().putAll(chunks, CSV_TTL);
+  return { ok: true, token: token };
+}
+
+function csvDownload_(token) {
+  const cache = CacheService.getScriptCache();
+  const metaText = cache.get('csv_' + String(token));
+  if (!metaText) {
+    return HtmlService.createHtmlOutput('<meta name="viewport" content="width=device-width"><p style="font-family:sans-serif;padding:24px">このリンクの有効期限（10分）が切れました。アプリでもう一度「出力」を押してください。</p>');
+  }
+  const meta = JSON.parse(metaText);
+  const keys = [];
+  for (let i = 0; i < meta.n; i++) keys.push('csv_' + token + '_' + i);
+  const parts = cache.getAll(keys);
+  const text = keys.map(k => parts[k] || '').join('');
+  return ContentService.createTextOutput('\uFEFF' + text)
+    .setMimeType(ContentService.MimeType.CSV)
+    .downloadAsFile(meta.filename);
 }
